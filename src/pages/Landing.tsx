@@ -44,42 +44,22 @@ export function Landing() {
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-10 px-5 pt-4 pb-16 lg:grid-cols-[1.15fr_1fr] lg:items-start lg:gap-14 lg:pt-10">
-        <section>
+        {/* Order on a phone: pitch, then sign in, then the rest, so no long scroll to reach the form. */}
+        <section className="lg:col-start-1 lg:row-start-1">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <Coin3D size={76} className="mb-4" />
+            <Coin3D size={76} className="mb-4 max-sm:!hidden" />
             <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
               <IconShield size={13} /> Private by design · free to start
             </span>
-            <h1 className="display mt-4 text-[2.6rem] leading-[1.02] font-extrabold sm:text-6xl">
+            <h1 className="display mt-4 text-[2.3rem] leading-[1.04] font-extrabold sm:text-6xl">
               Know what's <span className="text-gradient">safe to spend</span>.<br />
               Watch your wealth grow.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-muted">{PRODUCT_TAGLINE} Kaasu lines up every rupee when your salary lands, then keeps your investments, loans and goals honest.</p>
+            <p className="mt-5 max-w-xl text-lg text-muted max-sm:hidden">{PRODUCT_TAGLINE} Kaasu lines up every rupee when your salary lands, then keeps your investments, loans and goals honest.</p>
           </motion.div>
-
-          <PreviewStack />
-
-          <ul className="mt-10 grid gap-3 sm:grid-cols-2">
-            {FEATURES.map((f, i) => (
-              <motion.li
-                key={f.title}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ delay: (i % 2) * 0.06 }}
-                className="glass rounded-3xl p-4"
-              >
-                <span className="grid h-10 w-10 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, ${f.color} 16%, transparent)`, color: f.color }}>
-                  <f.icon size={20} />
-                </span>
-                <h3 className="mt-3 text-[15px] font-bold">{f.title}</h3>
-                <p className="mt-1 text-sm text-muted">{f.text}</p>
-              </motion.li>
-            ))}
-          </ul>
         </section>
 
-        <aside className="lg:sticky lg:top-8">
+        <aside className="lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1 lg:row-span-2">
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }} className="glass glass-strong rounded-[2rem] p-6 sm:p-7">
             <h2 className="display text-2xl font-extrabold">Create your free account</h2>
             <p className="mt-1 mb-5 text-sm text-muted">Takes a minute. No card, no password.</p>
@@ -108,6 +88,29 @@ export function Landing() {
             </li>
           </ul>
         </aside>
+
+        <div className="lg:col-start-1 lg:row-start-2">
+          <PreviewStack />
+
+          <ul className="mt-10 grid gap-3 sm:grid-cols-2">
+            {FEATURES.map((f, i) => (
+              <motion.li
+                key={f.title}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ delay: (i % 2) * 0.06 }}
+                className="glass rounded-3xl p-4"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, ${f.color} 16%, transparent)`, color: f.color }}>
+                  <f.icon size={20} />
+                </span>
+                <h3 className="mt-3 text-[15px] font-bold">{f.title}</h3>
+                <p className="mt-1 text-sm text-muted">{f.text}</p>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
       </main>
 
       <footer className="border-t border-line/70 px-5 py-6 text-center text-xs text-muted">
