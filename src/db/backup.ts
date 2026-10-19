@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { db, mergeSettings, nowISO } from "./db";
+import { clearUndo } from "./undo";
 
 /**
  * Full JSON backup. The format is versioned and validated on restore so a
@@ -118,6 +119,7 @@ export function parseBackup(text: string): { ok: true; backup: Backup } | { ok: 
 
 /** Replace everything with the backup, atomically. */
 export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
+  clearUndo();
   const d = backup.data;
   try {
     await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.settings, db.imports, db.cash, db.paydays, db.goals, db.goalFunds], async () => {
@@ -161,6 +163,7 @@ export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
 }
 
 export async function clearAll(): Promise<void> {
+  clearUndo();
   await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.imports, db.cash, db.paydays, db.goals, db.goalFunds], async () => {
     await Promise.all([
       db.cash.clear(),

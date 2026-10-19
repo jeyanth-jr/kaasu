@@ -2,6 +2,7 @@ import { accountDelta, fundingDirection } from "../domain/accounts";
 import type { ISODate, Instrument, Paise, Transaction } from "../domain/types";
 import { defaultsForKind } from "../domain/types";
 import { db, newId, nowISO } from "./db";
+import { withUndo } from "./undo";
 
 export type AccountType = "savings" | "current" | "sweep" | "wallet";
 
@@ -13,7 +14,11 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
 };
 
 /** Create a bank account (a cash holding) with the balance it has today. */
-export async function createAccount(input: { name: string; bank: string; type: AccountType; opening: Paise; asOf: ISODate }): Promise<Instrument> {
+export function createAccount(input: { name: string; bank: string; type: AccountType; opening: Paise; asOf: ISODate }): Promise<Instrument> {
+  return withUndo("Account added", () => createAccountInner(input));
+}
+
+async function createAccountInner(input: { name: string; bank: string; type: AccountType; opening: Paise; asOf: ISODate }): Promise<Instrument> {
   const created = nowISO();
   const account: Instrument = {
     id: newId("i_"),
@@ -33,7 +38,11 @@ export async function createAccount(input: { name: string; bank: string; type: A
 }
 
 /** Move money between two accounts: two linked legs, never counted as income or spending. */
-export async function transferBetween(input: { fromId: string; toId: string; amount: Paise; date: ISODate; note?: string }): Promise<void> {
+export function transferBetween(input: { fromId: string; toId: string; amount: Paise; date: ISODate; note?: string }): Promise<void> {
+  return withUndo("Transfer made", () => transferBetweenInner(input));
+}
+
+async function transferBetweenInner(input: { fromId: string; toId: string; amount: Paise; date: ISODate; note?: string }): Promise<void> {
   if (input.fromId === input.toId) throw new Error("Pick two different accounts.");
   if (!(input.amount > 0)) throw new Error("Enter an amount.");
   const created = nowISO();
@@ -46,7 +55,11 @@ export async function transferBetween(input: { fromId: string; toId: string; amo
 }
 
 /** Set the balance to what the bank shows today, recording the difference as a correction. */
-export async function correctBalance(accountId: string, actual: Paise, date: ISODate): Promise<Paise> {
+export function correctBalance(accountId: string, actual: Paise, date: ISODate): Promise<Paise> {
+  return withUndo("Balance corrected", () => correctBalanceInner(accountId, actual, date));
+}
+
+async function correctBalanceInner(accountId: string, actual: Paise, date: ISODate): Promise<Paise> {
   const txns = await db.txns.where("instrumentId").equals(accountId).toArray();
   const current = txns.reduce((s, t) => s + accountDelta(t), 0);
   const diff = actual - current;
@@ -89,7 +102,11 @@ export async function syncFunding(txn: Transaction, accountId: string | undefine
 }
 
 /** Delete a transaction together with everything it owns (its funding mirror, or the other leg of a transfer). */
-export async function deleteTxnCascade(id: string): Promise<void> {
+export function deleteTxnCascade(id: string): Promise<void> {
+  return withUndo("Transaction deleted", () => deleteTxnCascadeInner(id));
+}
+
+async function deleteTxnCascadeInner(id: string): Promise<void> {
   await db.transaction("rw", [db.txns, db.cash], async () => {
     const t = await db.txns.get(id);
     if (!t) return;
@@ -103,7 +120,11 @@ export async function deleteTxnCascade(id: string): Promise<void> {
 }
 
 /** Remove a bank account that has no history, or archive one that has. */
-export async function retireAccount(accountId: string): Promise<"deleted" | "archived"> {
+export function retireAccount(accountId: string): Promise<"deleted" | "archived"> {
+  return withUndo("Account removed", () => retireAccountInner(accountId));
+}
+
+async function retireAccountInner(accountId: string): Promise<"deleted" | "archived"> {
   const n = await db.txns.where("instrumentId").equals(accountId).count();
   if (n === 0) {
     await db.instruments.delete(accountId);

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAdd } from "../App";
 import { saveSettings } from "../db/db";
+import { undoLast, useUndoStack } from "../db/undo";
 import { cx } from "./components";
 import { useData } from "./data";
 import {
@@ -25,6 +26,7 @@ import {
   IconSettings,
   IconTarget,
   IconTransfer,
+  IconUndo,
   IconTrendUp,
   IconWallet,
 } from "./icons";
@@ -57,6 +59,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const { instruments, goals, settings } = useData();
   const { openMoney, openAdd, openPayday, openTour } = useAdd();
   const navigate = useNavigate();
+  const lastChange = useUndoStack().at(-1);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -64,6 +67,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const all = useMemo<Command[]>(() => {
     const go = (to: string) => () => navigate(to);
     const cmds: Command[] = [
+      ...(lastChange ? [{ id: "a-undo", group: "Actions" as const, label: `Undo: ${lastChange.label}`, icon: IconUndo, run: () => void undoLast(), words: "revert back" }] : []),
       { id: "a-spend", group: "Actions", label: "Log a spend", icon: IconReceiptPlain, run: () => openMoney("expense"), words: "expense paid add" },
       { id: "a-income", group: "Actions", label: "Log money received", icon: IconBanknote, run: () => openMoney("income"), words: "income salary refund add" },
       { id: "a-invest", group: "Actions", label: "Add an investment", icon: IconTrendUp, run: () => openAdd(), words: "buy sell sip stock fund transaction" },
@@ -95,7 +99,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     }
     for (const g of goals) if (!g.archived) cmds.push({ id: `goal-${g.id}`, group: "Goals", label: g.name, hint: g.term === "short" ? "Short term" : "Long term", icon: goalIcon(g.icon), run: go(`/goals?open=${g.id}`) });
     return cmds;
-  }, [instruments, goals, settings.privacyMode, navigate, openMoney, openAdd, openPayday, openTour]);
+  }, [lastChange, instruments, goals, settings.privacyMode, navigate, openMoney, openAdd, openPayday, openTour]);
 
   const results = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);

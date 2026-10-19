@@ -3,15 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { saveSettings } from "../db/db";
+import { withUndo } from "../db/undo";
 import { budgetLines, categoryOf, CATEGORIES, monthSummary, paydayStatus, safeToSpend, savingsStreak, type CashEntry, type EntryKind } from "../domain/cashflow";
 import { addMonthsToKey, formatDate, formatMonth, monthKey } from "../domain/dates";
-import { formatCompact, formatINR, formatPct } from "../domain/money";
-import { Badge, Button, Card, EmptyState, Field, IconTile, Meter, Money, PageHeader, Select, Sheet, cx } from "../ui/components";
+import { formatCompact, formatINR, formatPct, salaryLooksOff } from "../domain/money";
+import { Badge, Button, Callout, Card, EmptyState, Field, IconTile, Meter, Money, PageHeader, Select, Sheet, cx } from "../ui/components";
 import { AccountTag } from "../ui/accounts";
 import { useData } from "../ui/data";
 import { CategoryIcon } from "../ui/categoryIcons";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
-import { IconBanknote, IconCalendarClock, IconCheckCircle, IconChevron, IconFlame, IconParty, IconPlus, IconTarget, IconUpload, IconWallet } from "../ui/icons";
+import { IconBanknote, IconCalendarClock, IconCheckCircle, IconChevron, IconEdit, IconFlame, IconParty, IconPlus, IconTarget, IconUpload, IconWallet } from "../ui/icons";
 import { MoneyInput, NumberInput } from "../ui/inputs";
 import { useCommitments } from "../ui/money";
 import { EntrySheet, PaydaySheet, StatementSheet } from "../ui/MoneySheets";
@@ -64,6 +65,11 @@ export function MoneyPage() {
         sub="Salary in, spending out, and what's safe to spend."
         action={
           <div className="flex gap-2">
+            {salary && (
+              <Button onClick={() => setSalarySetup(true)}>
+                <IconEdit size={16} /> Edit salary
+              </Button>
+            )}
             <Button onClick={() => setStatement(true)}>
               <IconUpload size={16} /> Statement
             </Button>
@@ -451,7 +457,7 @@ export function SalarySetupSheet({ onClose }: { onClose: () => void }) {
               variant="ghost"
               className="mr-auto"
               onClick={async () => {
-                await saveSettings({ salary: undefined });
+                await withUndo("Payday turned off", () => saveSettings({ salary: undefined }));
                 onClose();
               }}
             >
@@ -462,7 +468,7 @@ export function SalarySetupSheet({ onClose }: { onClose: () => void }) {
             variant="primary"
             disabled={!amount || !day}
             onClick={async () => {
-              await saveSettings({ salary: { amount: amount!, day: Math.max(1, Math.min(31, day!)), accountId: accountId || undefined, employer: employer.trim() || undefined } });
+              await withUndo("Payday updated", () => saveSettings({ salary: { amount: amount!, day: Math.max(1, Math.min(31, day!)), accountId: accountId || undefined, employer: employer.trim() || undefined } }));
               onClose();
             }}
           >
@@ -490,6 +496,13 @@ export function SalarySetupSheet({ onClose }: { onClose: () => void }) {
         </Field>
         <Field label="Employer (optional)">{(id) => <input id={id} className="w-full rounded-2xl border border-line bg-paper/60 px-3.5 py-2.5 text-sm" value={employer} onChange={(e) => setEmployer(e.target.value)} />}</Field>
       </div>
+      {amount !== null && salaryLooksOff(amount, settings.salary?.amount) && (
+        <div className="mt-3">
+          <Callout tone="warn" title="Double-check the amount">
+            {formatINR(amount)} is far from {settings.salary?.amount ? `your usual ${formatINR(settings.salary.amount)}` : "a typical monthly salary"}. An extra or missing zero is easy to type.
+          </Callout>
+        </div>
+      )}
       <p className="mt-3 text-xs text-faint">Kaasu can't read your bank account. On payday it asks you to confirm, which takes one tap.</p>
     </Sheet>
   );

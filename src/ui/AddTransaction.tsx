@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteTxnCascade, fundingAccountOf, syncFunding } from "../db/accounts";
 import { db, newId, nowISO, saveSettings } from "../db/db";
+import { withUndo } from "../db/undo";
 import { activeAccounts, fundingDirection } from "../domain/accounts";
 import { searchKnownSymbols, type KnownSymbol } from "../data/symbols";
 import { addMonths, isValidISO, todayISO, withDay } from "../domain/dates";
@@ -182,7 +183,11 @@ export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { op
     return openQty(matchFifo(txns.filter((t) => t.instrumentId === inst.id && t.id !== txnId)));
   }, [inst, txns, txnId]);
 
-  async function save() {
+  function save() {
+    return withUndo(editing ? "Transaction updated" : "Transaction saved", saveInner);
+  }
+
+  async function saveInner() {
     if (!inst) return;
     const err = validateTxn(inst, draft, heldQty);
     if (err) return setError(err);

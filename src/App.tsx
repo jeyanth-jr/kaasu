@@ -46,6 +46,7 @@ import { useSyncActive, useSyncState } from "./sync/state";
 import { Logo } from "./ui/Logo";
 import { Onboarding } from "./ui/Onboarding";
 import { CommandPalette, usePaletteShortcut } from "./ui/CommandPalette";
+import { UndoHost } from "./ui/UndoHost";
 import { Tour, TourAutoStart } from "./ui/Tour";
 
 // Pages load on demand so the first screen arrives quickly on a phone.
@@ -459,6 +460,7 @@ export function App() {
           <TourAutoStart onOpen={() => setTour(true)} />
           <Tour open={tour} onClose={() => setTour(false)} />
           <CommandPalette open={palette} onClose={() => setPalette(false)} />
+          <UndoHost />
           </Gate>
         </HashRouter>
       </AddContext.Provider>

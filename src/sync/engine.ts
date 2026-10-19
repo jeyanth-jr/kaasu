@@ -1,3 +1,4 @@
+import { clearUndo } from "../db/undo";
 import type { KaasuDB, OutboxEntry } from "../db/db";
 import { COLLECTIONS, idToKey, isCollection, isSampleRecord, keyToId, tableOf, type Collection } from "./collections";
 import { markRemote } from "./track";
@@ -153,6 +154,7 @@ export async function seedOutbox(db: KaasuDB): Promise<number> {
 
 /** Remove everything synced from this device, leaving it empty and unowned. */
 export async function wipeLocal(db: KaasuDB, newOwner?: string): Promise<void> {
+  clearUndo();
   const tables = COLLECTIONS.map((c) => tableOf(db, c));
   await db.transaction("rw", [...tables, db.outbox, db.syncMeta], async (tx) => {
     markRemote(tx); // don't queue these deletions for upload

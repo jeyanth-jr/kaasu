@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAdd } from "../App";
+import { withUndo } from "../db/undo";
 import { db } from "../db/db";
 import { formatDate, monthKey, todayISO } from "../domain/dates";
 import { parseLookThroughPaste, latestLookThrough } from "../domain/equity";
@@ -48,14 +49,14 @@ export function HoldingDetailPage() {
   async function remove() {
     if (!inst) return;
     if (!confirm(`Delete ${inst.name} and its ${myTxns.length} transactions? This can't be undone (unless you restore a backup).`)) return;
-    await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough], async () => {
+    await withUndo("Holding deleted", () => db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough], async () => {
       const own = await db.txns.where("instrumentId").equals(inst.id).primaryKeys();
       for (const id of own) await db.txns.where("fundsTxnId").equals(id).delete();
       await db.txns.where("instrumentId").equals(inst.id).delete();
       await db.prices.where("instrumentId").equals(inst.id).delete();
       await db.lookThrough.where("instrumentId").equals(inst.id).delete();
       await db.instruments.delete(inst.id);
-    });
+    }));
     nav("/holdings");
   }
 

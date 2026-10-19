@@ -2,6 +2,7 @@ import type { CashEntry, EntryKind, StatementRow } from "../domain/cashflow";
 import { monthKey } from "../domain/dates";
 import type { Paise, Transaction } from "../domain/types";
 import { db, newId, nowISO } from "./db";
+import { withUndo } from "./undo";
 
 /**
  * Cash entries can be posted to a cash/savings holding so its balance stays
@@ -32,7 +33,12 @@ export interface EntryInput {
   source?: CashEntry["source"];
 }
 
-export async function saveEntry(input: EntryInput, existing?: CashEntry): Promise<CashEntry> {
+export function saveEntry(input: EntryInput, existing?: CashEntry): Promise<CashEntry> {
+  const label = existing ? "Entry updated" : input.category === "salary" ? "Salary logged" : input.kind === "income" ? "Income logged" : "Spend logged";
+  return withUndo(label, () => writeEntry(input, existing));
+}
+
+async function writeEntry(input: EntryInput, existing?: CashEntry): Promise<CashEntry> {
   const entry: CashEntry = {
     id: existing?.id ?? newId("c_"),
     date: input.date,
@@ -58,7 +64,11 @@ export async function saveEntry(input: EntryInput, existing?: CashEntry): Promis
   return entry;
 }
 
-export async function deleteEntry(entry: CashEntry): Promise<void> {
+export function deleteEntry(entry: CashEntry): Promise<void> {
+  return withUndo("Entry deleted", () => removeEntry(entry));
+}
+
+async function removeEntry(entry: CashEntry): Promise<void> {
   await db.transaction("rw", [db.cash, db.txns, db.paydays], async () => {
     if (entry.linkedTxnId) await db.txns.delete(entry.linkedTxnId);
     await db.cash.delete(entry.id);
@@ -68,7 +78,11 @@ export async function deleteEntry(entry: CashEntry): Promise<void> {
 }
 
 /** "Salary in!": records the credit and opens this month's payday checklist. */
-export async function confirmSalary(input: { date: string; amount: Paise; accountId?: string; postToAccount: boolean; employer?: string }): Promise<CashEntry> {
+export function confirmSalary(input: { date: string; amount: Paise; accountId?: string; postToAccount: boolean; employer?: string }): Promise<CashEntry> {
+  return withUndo("Salary confirmed", () => writeSalary(input));
+}
+
+async function writeSalary(input: { date: string; amount: Paise; accountId?: string; postToAccount: boolean; employer?: string }): Promise<CashEntry> {
   const entry = await saveEntry({
     date: input.date,
     kind: "income",
@@ -97,7 +111,11 @@ export interface StatementImportResult {
 }
 
 /** Import parsed statement rows; rows already imported (same fingerprint) are skipped. */
-export async function importStatement(rows: (StatementRow & { include: boolean })[], opts: { accountId?: string; postToAccount: boolean; fileName: string }): Promise<StatementImportResult> {
+export function importStatement(rows: (StatementRow & { include: boolean })[], opts: { accountId?: string; postToAccount: boolean; fileName: string }): Promise<StatementImportResult> {
+  return withUndo("Statement imported", () => writeStatement(rows, opts));
+}
+
+async function writeStatement(rows: (StatementRow & { include: boolean })[], opts: { accountId?: string; postToAccount: boolean; fileName: string }): Promise<StatementImportResult> {
   const batchId = newId("b_");
   const created = nowISO();
   const known = new Set((await db.cash.where("fingerprint").anyOf(rows.map((r) => r.fingerprint)).toArray()).map((e) => e.fingerprint));

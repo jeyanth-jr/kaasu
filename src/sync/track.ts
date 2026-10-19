@@ -7,7 +7,7 @@ const REMOTE = "__kaasuRemote";
 export function markRemote(tx: unknown): void {
   (tx as Record<string, unknown>)[REMOTE] = true;
 }
-const isRemote = (tx: unknown) => !!tx && (tx as Record<string, unknown>)[REMOTE] === true;
+export const isRemote = (tx: unknown) => !!tx && (tx as Record<string, unknown>)[REMOTE] === true;
 
 let counter = 0;
 const nonce = () => `${Date.now().toString(36)}.${(counter++).toString(36)}`;
