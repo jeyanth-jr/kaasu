@@ -18,7 +18,9 @@ export class ApiError extends Error {
   }
 }
 
-const base = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
+// A bare host (no scheme) would otherwise resolve as a path on the current site.
+const rawBase = (import.meta.env.VITE_API_BASE ?? "").trim().replace(/\/+$/, "");
+const base = rawBase && !/^(https?:)?\/\//i.test(rawBase) && !rawBase.startsWith("/") ? `https://${rawBase}` : rawBase;
 
 export async function apiGet<T>(path: string, timeoutMs = 35_000): Promise<T> {
   const headers: Record<string, string> = {};
