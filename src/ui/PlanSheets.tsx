@@ -9,6 +9,7 @@ import { defaultsForKind } from "../domain/types";
 import { Button, Callout, Field, Input, Select, Sheet, Toggle, cx } from "./components";
 import { useData } from "./data";
 import { IconGem, IconLandmark, IconPiggy, IconTrendUp } from "./icons";
+import { AccountSelect } from "./accounts";
 import { MoneyInput, NumberInput } from "./inputs";
 import { KIND_STYLE, LOAN_ICON } from "./planStyle";
 
@@ -99,6 +100,7 @@ function SipForm({ onDone, onBack }: { onDone: () => void; onBack: () => void })
   const [day, setDay] = useState<number | null>(5);
   const [start, setStart] = useState(todayISO());
   const [months, setMonths] = useState<number | null>(null);
+  const [sipAccount, setSipAccount] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const existing = funds.find((f) => f.id === fundId);
   const hasSip = existing?.details.kind === "mf" && !!existing.details.sip;
@@ -106,7 +108,7 @@ function SipForm({ onDone, onBack }: { onDone: () => void; onBack: () => void })
   async function save() {
     if (!amount || !day || !isValidISO(start)) return setError("Fill in the amount, day and start date.");
     if (fundId === "new" && !name.trim()) return setError("Name the fund.");
-    const sip = { amount, day: Math.max(1, Math.min(31, day)), start, end: months ? lastInstalmentDate(start, day, months) : undefined };
+    const sip = { amount, day: Math.max(1, Math.min(31, day)), start, end: months ? lastInstalmentDate(start, day, months) : undefined, accountId: sipAccount };
     if (existing && existing.details.kind === "mf") {
       await db.instruments.put({ ...existing, details: { ...existing.details, sip } });
     } else {
@@ -142,6 +144,7 @@ function SipForm({ onDone, onBack }: { onDone: () => void; onBack: () => void })
       <Field label="Debited on day">{(id) => <NumberInput id={id} value={day} onChange={(n) => setDay(n === null ? null : Math.round(n))} />}</Field>
       <Field label="First instalment from">{(id) => <Input id={id} type="date" value={start} onChange={(e) => setStart(e.target.value)} />}</Field>
       <Duration months={months} setMonths={setMonths} hint="Leave empty for a SIP that runs until you stop it" />
+      <AccountSelect className="sm:col-span-2" label="Debited from" hint={'After each due date Kaasu asks "have you paid?", then records the units at the NAV you give and takes the amount from this account.'} value={sipAccount} onChange={setSipAccount} />
       {hasSip && <p className="text-xs text-warn sm:col-span-2">This fund already has a SIP. Saving replaces it.</p>}
       <div className="sm:col-span-2">
         <FormFooter onBack={onBack} onSave={() => void save()} error={error} />
@@ -157,6 +160,7 @@ function RdForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) 
   const [start, setStart] = useState(todayISO());
   const [months, setMonths] = useState<number | null>(12);
   const [penalty, setPenalty] = useState<number | null>(1);
+  const [rdAccount, setRdAccount] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   async function save() {
@@ -166,7 +170,7 @@ function RdForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) 
       name: `${bank.trim()} RD`,
       kind: "rd",
       ...defaultsForKind("rd"),
-      details: { kind: "rd", bank: bank.trim(), monthlyAmount: amount, ratePct: rate ?? 0, start, tenureMonths: months, penaltyPct: penalty ?? 0 },
+      details: { kind: "rd", bank: bank.trim(), monthlyAmount: amount, ratePct: rate ?? 0, start, tenureMonths: months, penaltyPct: penalty ?? 0, accountId: rdAccount, autoFrom: rdAccount ? (start > todayISO() ? start : todayISO()) : undefined },
       createdAt: nowISO(),
     };
     await db.instruments.add(inst);
@@ -181,6 +185,7 @@ function RdForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) 
       <Field label="Premature penalty (% off rate)">{(id) => <NumberInput id={id} value={penalty} onChange={setPenalty} />}</Field>
       <Field label="Started on">{(id) => <Input id={id} type="date" value={start} onChange={(e) => setStart(e.target.value)} />}</Field>
       <Duration months={months} setMonths={setMonths} hint="Tenure of the RD" />
+      <AccountSelect className="sm:col-span-2" label="Debit instalments from, credit maturity to" hint="Kaasu records each instalment on its date and the maturity amount when the RD ends, from today on." value={rdAccount} onChange={setRdAccount} />
       <div className="sm:col-span-2">
         <FormFooter onBack={onBack} onSave={() => void save()} error={error} />
       </div>

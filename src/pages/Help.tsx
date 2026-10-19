@@ -193,6 +193,9 @@ export function HelpPage() {
             <Faq q="My numbers look off after importing">
               A holdings sheet records one buy per row at the average price on that date, so tax lots and XIRR start from those dates. For exact lots, import your real trade history instead.
             </Faq>
+            <Faq q="Can Kaasu record my RD, bond and SIP payments for me?">
+              RDs and bonds, yes: pick the bank account on the RD (debits and maturity) or on the bond (coupons and maturity) and Kaasu records each payment on its date and moves that account's balance. It starts from the day you pick the account and never adds the same payment twice. For SIPs it asks "have you paid?" after the due date; you give the average NAV and it records the units and the debit. RD maturity uses an estimate, so edit it if your bank paid a different amount.
+            </Faq>
             <Faq q="How do I stop a SIP or end a loan?">
               Plans → open the SIP and choose Stop SIP, or Edit a loan to change or delete it. Past instalments stay on record.
             </Faq>

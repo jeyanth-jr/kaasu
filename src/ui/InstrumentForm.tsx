@@ -3,6 +3,7 @@ import { segmentLabel } from "../domain/equity";
 import type { AssetClass, EmergencyLayer, EquitySegment, Instrument, InstrumentDetails, InstrumentKind, PayoutFrequency, TaxClass } from "../domain/types";
 import { ASSET_CLASSES, EQUITY_SEGMENTS, KIND_LABEL, defaultsForKind } from "../domain/types";
 import { Field, Input, Select, Toggle } from "./components";
+import { AccountSelect } from "./accounts";
 import { MoneyInput, NumberInput } from "./inputs";
 
 export function blankDetails(kind: InstrumentKind): InstrumentDetails {
@@ -178,6 +179,13 @@ export function InstrumentForm({ value, onChange }: { value: Instrument; onChang
           <Field label="Start date">{(id) => <Input id={id} type="date" value={d.start} onChange={(e) => setD({ start: e.target.value })} />}</Field>
           <Field label="Tenure (months)">{(id) => <NumberInput id={id} value={d.tenureMonths} onChange={(n) => setD({ tenureMonths: Math.round(n ?? 0) })} />}</Field>
           <Field label="Premature penalty (% off rate)">{(id) => <NumberInput id={id} value={d.penaltyPct} onChange={(n) => setD({ penaltyPct: n ?? 0 })} />}</Field>
+          <AccountSelect
+            className="sm:col-span-2"
+            label="Debit instalments from, credit maturity to"
+            hint="Kaasu records each instalment on its date and the maturity amount when the RD ends. Starts from today."
+            value={d.accountId}
+            onChange={(id) => setD({ accountId: id, autoFrom: id ? (d.accountId === id && d.autoFrom ? d.autoFrom : todayISO()) : undefined })}
+          />
         </>
       )}
 
@@ -230,6 +238,13 @@ export function InstrumentForm({ value, onChange }: { value: Instrument; onChang
           <Field label="Maturity date">{(id) => <Input id={id} type="date" value={d.maturity} onChange={(e) => setD({ maturity: e.target.value })} />}</Field>
           <Field label="Credit rating">{(id) => <Input id={id} value={d.rating ?? ""} placeholder="AAA, AA+ …" onChange={(e) => setD({ rating: e.target.value.toUpperCase() })} />}</Field>
           <Field label="TDS on coupons (%)">{(id) => <NumberInput id={id} value={d.tdsPct} onChange={(n) => setD({ tdsPct: n ?? 0 })} />}</Field>
+          <AccountSelect
+            className="sm:col-span-2"
+            label="Credit coupons and maturity to"
+            hint="Kaasu records each coupon (after TDS) and the redemption on their dates, and adds them to this account. Starts from today."
+            value={d.payoutAccountId}
+            onChange={(id) => setD({ payoutAccountId: id, autoFrom: id ? (d.payoutAccountId === id && d.autoFrom ? d.autoFrom : todayISO()) : undefined })}
+          />
           <div className="sm:col-span-2">
             <Toggle checked={d.listed} onChange={(on) => onChange({ ...value, taxClass: on ? "listedOther" : "unlistedOther", details: { ...d, listed: on } })} label="Listed on an exchange" hint="Listed bonds turn long-term after 12 months, unlisted after 24" />
           </div>

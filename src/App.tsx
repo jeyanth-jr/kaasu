@@ -47,6 +47,7 @@ import { Logo } from "./ui/Logo";
 import { Onboarding } from "./ui/Onboarding";
 import { CommandPalette, usePaletteShortcut } from "./ui/CommandPalette";
 import { UndoHost } from "./ui/UndoHost";
+import { useAutoPost } from "./ui/useAutoPost";
 import { Tour, TourAutoStart } from "./ui/Tour";
 
 // Pages load on demand so the first screen arrives quickly on a phone.
@@ -152,6 +153,7 @@ function Shell({ children }: { children: ReactNode }) {
   const { settings, instruments, ready } = useData();
   const { openChooser, openPalette } = useAdd();
   useSavingsTracker();
+  useAutoPost();
   const [theme, setTheme] = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [report, setReport] = useState<RefreshReport | null>(null);

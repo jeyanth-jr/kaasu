@@ -26,6 +26,7 @@ import { IconCalendarClock, IconChevron, IconFlag, IconHourglass, IconIdea, Icon
 import { MoneyInput } from "../ui/inputs";
 import { KIND_STYLE, LOAN_ICON } from "../ui/planStyle";
 import { LoanSheet, NewPlanSheet } from "../ui/PlanSheets";
+import { SipDueCard } from "../ui/SipDue";
 
 const KINDS: ScheduleKind[] = ["sip", "rd", "chit", "commitment", "emi"];
 
@@ -53,6 +54,10 @@ export function PlansPage() {
           </Button>
         }
       />
+
+      <div className="mb-4 empty:hidden">
+        <SipDueCard />
+      </div>
 
       {items.length === 0 ? (
         <EmptyState

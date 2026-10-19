@@ -57,6 +57,10 @@ export interface SipPlan {
   day: number; // 1–28
   start: ISODate;
   end?: ISODate;
+  /** The bank account the SIP is debited from; preselected when asking "have you paid?". */
+  accountId?: string;
+  /** Months (YYYY-MM) the user said were not paid, so they are not asked about again. */
+  skipped?: string[];
 }
 
 export type InstrumentDetails =
@@ -71,6 +75,12 @@ export type InstrumentDetails =
       start: ISODate;
       tenureMonths: number;
       penaltyPct: number;
+      /** Account the instalments are debited from and the maturity amount credited to; Kaasu then records them on schedule. */
+      accountId?: string;
+      /** Scheduled payments are recorded automatically from this date on. */
+      autoFrom?: ISODate;
+      /** Scheduled payments already recorded (or deliberately removed), so they are never recreated. */
+      autoLog?: string[];
     }
   | {
       kind: "fd";
@@ -93,6 +103,10 @@ export type InstrumentDetails =
       rating?: string;
       tdsPct: number;
       listed: boolean;
+      /** Account that receives coupons and the maturity amount; Kaasu then records them on schedule. */
+      payoutAccountId?: string;
+      autoFrom?: ISODate;
+      autoLog?: string[];
     }
   | { kind: "gold"; form: "etf" | "physical"; symbol?: string; exchange?: "NSE" | "BSE"; purity?: string }
   | { kind: "cash"; bank: string; account: "savings" | "current" | "sweep" | "wallet"; ratePct?: number }
@@ -147,7 +161,7 @@ export interface Transaction {
   charges?: Paise;
   tds?: Paise;
   notes?: string;
-  source: "manual" | "csv" | "sample" | "restore";
+  source: "manual" | "csv" | "sample" | "restore" | "auto";
   importBatchId?: string;
   /** On a bank-account transaction: the investment transaction whose money moved through this account. */
   fundsTxnId?: string;

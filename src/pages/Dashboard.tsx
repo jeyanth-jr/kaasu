@@ -17,6 +17,7 @@ import { endDemo, useDemo } from "../sync/demo";
 import { CategoryIcon } from "../ui/categoryIcons";
 import { BankBalancesCard, GoalsCard } from "../ui/DashCards";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
+import { SipDueCard } from "../ui/SipDue";
 import { IconAlert, IconBanknote, IconChevron, IconHand, IconReceiptPlain, IconRepeat, IconRocket, IconTrendUp, IconWallet } from "../ui/icons";
 
 function greeting(): string {
@@ -106,6 +107,8 @@ export function DashboardPage() {
       )}
 
       {(status.state === "due" || status.state === "not-set") && <PaydayBanner status={status} onOpen={openPayday} onSetup={() => setSetup(true)} />}
+
+      <SipDueCard />
 
       {/* Hero */}
       <motion.section

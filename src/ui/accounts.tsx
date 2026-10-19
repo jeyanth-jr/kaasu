@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { activeAccounts } from "../domain/accounts";
 import type { Instrument, Paise } from "../domain/types";
-import { cx, Money } from "./components";
+import { cx, Field, Money, Select } from "./components";
 import { useData } from "./data";
 import { IconLandmark } from "./icons";
 
@@ -77,5 +77,35 @@ export function AccountTag({ id }: { id: string | undefined }) {
       <IconLandmark size={11} />
       {a.name}
     </span>
+  );
+}
+
+/** A field for choosing the bank account a scheduled payment goes through. Choosing one switches automatic recording on. */
+export function AccountSelect({ label, hint, value, onChange, className }: { label: string; hint?: string; value: string | undefined; onChange: (id: string | undefined) => void; className?: string }) {
+  const { accounts } = useAccounts();
+  if (accounts.length === 0) {
+    return (
+      <Field label={label} hint="Add a bank account under Accounts first, then pick it here." className={className}>
+        {(id) => (
+          <Select id={id} disabled value="">
+            <option value="">No bank accounts yet</option>
+          </Select>
+        )}
+      </Field>
+    );
+  }
+  return (
+    <Field label={label} hint={hint} className={className}>
+      {(id) => (
+        <Select id={id} value={value ?? ""} onChange={(e) => onChange(e.target.value || undefined)}>
+          <option value="">Don't record automatically</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </Select>
+      )}
+    </Field>
   );
 }
