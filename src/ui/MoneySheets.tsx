@@ -100,6 +100,23 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
         <div className="rounded-3xl bg-sunken/70 px-4 py-3">
           <div className="text-xs font-semibold text-muted">Amount</div>
           <BigAmount value={amount} onChange={setAmount} />
+          <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Quick amounts">
+            {[100, 200, 500, 1000, 5000].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setAmount((amount ?? 0) + n * 100)}
+                className="rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold transition active:scale-95 hover:border-accent hover:text-accent"
+              >
+                +{n >= 1000 ? `${n / 1000}K` : n}
+              </button>
+            ))}
+            {amount !== null && (
+              <button type="button" onClick={() => setAmount(null)} className="rounded-full px-2.5 py-1 text-xs font-semibold text-faint hover:text-loss">
+                Clear
+              </button>
+            )}
+          </div>
         </div>
         {error && <Callout tone="warn">{error}</Callout>}
         <div>

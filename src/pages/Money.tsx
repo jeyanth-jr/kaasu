@@ -32,7 +32,8 @@ export function MoneyPage() {
   const lines = budgetLines(summary, settings.categoryBudgets);
   const status = paydayStatus(salary, cash, asOf);
   const streak = useMemo(() => savingsStreak(cash, asOf), [cash, asOf]);
-  const entries = useMemo(() => cash.filter((e) => monthKey(e.date) === month).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt.localeCompare(a.createdAt))), [cash, month]);
+  const [catFilter, setCatFilter] = useState<string | null>(null);
+  const entries = useMemo(() => cash.filter((e) => monthKey(e.date) === month && (!catFilter || e.category === catFilter)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt.localeCompare(a.createdAt))), [cash, month, catFilter]);
   const prev = useMemo(() => monthSummary(cash, addMonthsToKey(month, -1)), [cash, month]);
   const history = useMemo(
     () =>
@@ -156,7 +157,15 @@ export function MoneyPage() {
               ) : (
                 <ul className="flex flex-col gap-3.5">
                   {lines.map((l) => (
-                    <li key={l.category.id} className="flex items-center gap-3">
+                    <li
+                      key={l.category.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={catFilter === l.category.id}
+                      onClick={() => setCatFilter(catFilter === l.category.id ? null : l.category.id)}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setCatFilter(catFilter === l.category.id ? null : l.category.id)}
+                      className={cx("-mx-2 flex cursor-pointer items-center gap-3 rounded-2xl px-2 py-1.5 transition-colors hover:bg-sunken/70", catFilter === l.category.id && "bg-accent-soft/60 ring-1 ring-accent/40")}
+                    >
                       <IconTile color={l.category.color}>
                         <CategoryIcon id={l.category.id} />
                       </IconTile>
@@ -193,7 +202,7 @@ export function MoneyPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-5">
-            <Card title={`Entries · ${entries.length}`} className="lg:col-span-3" pad={false} action={<Button size="sm" variant="ghost" onClick={() => setEntrySheet({ kind: "income" })}>+ Income</Button>}>
+            <Card title={catFilter ? `${categoryOf(catFilter).label} · ${entries.length}` : `Entries · ${entries.length}`} className="lg:col-span-3" pad={false} action={<span className="flex gap-1">{catFilter && <Button size="sm" variant="secondary" onClick={() => setCatFilter(null)}>Show all ✕</Button>}<Button size="sm" variant="ghost" onClick={() => setEntrySheet({ kind: "income" })}>+ Income</Button></span>}>
               {entries.length === 0 ? (
                 <p className="px-5 pb-5 text-sm text-muted">Nothing logged for {formatMonth(month)}.</p>
               ) : (
@@ -392,6 +401,16 @@ function BudgetsSheet({ onClose }: { onClose: () => void }) {
             <div className="w-36">
               <MoneyInput value={b[c.id] ?? null} onChange={(p) => setB({ ...b, [c.id]: p ?? 0 })} placeholder="—" />
             </div>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(20_000_00, (b[c.id] ?? 0) * 2)}
+              step={500_00}
+              value={b[c.id] ?? 0}
+              onChange={(e) => setB({ ...b, [c.id]: Number(e.target.value) })}
+              aria-label={`${c.label} budget`}
+              className="hidden w-24 accent-[var(--accent)] sm:block"
+            />
           </li>
         ))}
       </ul>

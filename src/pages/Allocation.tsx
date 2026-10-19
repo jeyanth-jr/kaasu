@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { saveSettings } from "../db/db";
 import { rebalanceWithNewMoney } from "../domain/allocation";
 import { formatINR, formatPct } from "../domain/money";
+import type { AssetClass } from "../domain/types";
 import { Badge, Callout, Card, EmptyState, Field, Money, PageHeader, Tabs, Toggle, cx } from "../ui/components";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEquity } from "../ui/derived";
@@ -14,6 +15,7 @@ export function AllocationPage() {
   const { settings } = useData();
   const { view, values } = useAllocation();
   const [newMoney, setNewMoney] = useState<number | null>(settings.monthlyBudget);
+  const [hover, setHover] = useState<AssetClass | null>(null);
   const plan = useMemo(() => rebalanceWithNewMoney(values, settings.bands, newMoney ?? 0), [values, settings.bands, newMoney]);
 
   if (view.total === 0) {
@@ -25,6 +27,7 @@ export function AllocationPage() {
     );
   }
 
+  const hoverRow = hover ? view.rows.find((r) => r.assetClass === hover) : undefined;
   const pieData = view.rows.filter((r) => r.value > 0).map((r) => ({ name: CLASS_LABEL[r.assetClass], value: r.value, c: r.assetClass }));
 
   return (
@@ -36,16 +39,39 @@ export function AllocationPage() {
             <div className="money relative mx-auto h-40 w-40 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" innerRadius="62%" outerRadius="100%" paddingAngle={1.5} stroke="none" isAnimationActive={false}>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    innerRadius="62%"
+                    outerRadius="100%"
+                    paddingAngle={1.5}
+                    stroke="none"
+                    isAnimationActive={false}
+                    onMouseEnter={(_, i) => setHover(pieData[i]?.c ?? null)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={(_, i) => setHover((h) => (h === pieData[i]?.c ? null : (pieData[i]?.c ?? null)))}
+                  >
                     {pieData.map((d) => (
-                      <Cell key={d.c} fill={CLASS_COLOR[d.c]} />
+                      <Cell key={d.c} fill={CLASS_COLOR[d.c]} fillOpacity={hover && hover !== d.c ? 0.3 : 1} style={{ cursor: "pointer", transition: "fill-opacity 0.2s" }} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[11px] text-muted">allocated</span>
-                <Money p={view.total} compact className="text-lg font-semibold" />
+                {hoverRow ? (
+                  <>
+                    <span className="text-[11px] font-semibold" style={{ color: CLASS_COLOR[hoverRow.assetClass] }}>
+                      {CLASS_LABEL[hoverRow.assetClass]}
+                    </span>
+                    <span className="display text-xl leading-none font-extrabold num">{formatPct(hoverRow.pct)}</span>
+                    <Money p={hoverRow.value} compact className="text-xs text-muted" />
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[11px] text-muted">allocated</span>
+                    <Money p={view.total} compact className="text-lg font-semibold" />
+                  </>
+                )}
               </div>
             </div>
             <ul className="flex flex-1 flex-col gap-3">

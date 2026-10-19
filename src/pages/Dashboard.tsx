@@ -8,14 +8,14 @@ import { daysBetween, formatDate, formatMonth, monthKey } from "../domain/dates"
 import { formatCompact, formatINR, formatPct } from "../domain/money";
 import { netWorthSeries } from "../domain/portfolio";
 import { monthSummary, paydayStatus, safeToSpend } from "../domain/cashflow";
-import { AnimatedMoney, Badge, Button, Callout, Card, EmptyState, Meter, Money, PageHeader, Tabs, cx } from "../ui/components";
+import { AnimatedMoney, Badge, Button, Callout, Card, EmptyState, IconTile, Meter, Money, PageHeader, Tabs, cx } from "../ui/components";
 import { useCommitments } from "../ui/money";
 import { PaydayBanner, SalarySetupSheet } from "./Money";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
 import { CategoryIcon } from "../ui/categoryIcons";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
-import { IconAlert, IconChevron, IconHand, IconRocket, IconWallet } from "../ui/icons";
+import { IconAlert, IconBanknote, IconChevron, IconHand, IconReceiptPlain, IconRepeat, IconRocket, IconTrendUp, IconWallet } from "../ui/icons";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -134,6 +134,8 @@ export function DashboardPage() {
         )}
       </motion.section>
 
+      <QuickActions />
+
       <SavingsGoalCard />
 
       <MoneySnapshot />
@@ -150,6 +152,51 @@ export function DashboardPage() {
         <AlertsCard />
       </div>
       {setup && <SalarySetupSheet onClose={() => setSetup(false)} />}
+    </div>
+  );
+}
+
+function QuickActions() {
+  const { openMoney, openAdd } = useAdd();
+  const tiles = [
+    { label: "Spent", icon: IconReceiptPlain, color: "var(--loss)", onClick: () => openMoney("expense") },
+    { label: "Got money", icon: IconBanknote, color: "var(--gain)", onClick: () => openMoney("income") },
+    { label: "Invest", icon: IconTrendUp, color: "var(--accent)", onClick: () => openAdd() },
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {tiles.map((t, i) => (
+        <motion.button
+          key={t.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 + i * 0.05 }}
+          whileHover={{ y: -3 }}
+          whileTap={{ scale: 0.93 }}
+          onClick={t.onClick}
+          className="flex flex-col items-center gap-2 rounded-3xl border border-line/80 bg-surface px-2 py-3.5 text-xs font-bold shadow-card"
+        >
+          <IconTile color={t.color}>
+            <t.icon size={20} />
+          </IconTile>
+          {t.label}
+        </motion.button>
+      ))}
+      <Link to="/plans" className="contents">
+        <motion.span
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.23 }}
+          whileHover={{ y: -3 }}
+          whileTap={{ scale: 0.93 }}
+          className="flex flex-col items-center gap-2 rounded-3xl border border-line/80 bg-surface px-2 py-3.5 text-xs font-bold shadow-card"
+        >
+          <IconTile color="var(--c-gold)">
+            <IconRepeat size={20} />
+          </IconTile>
+          Plans
+        </motion.span>
+      </Link>
     </div>
   );
 }
