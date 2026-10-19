@@ -13,7 +13,8 @@ import { useCommitments } from "../ui/money";
 import { PaydayBanner, SalarySetupSheet } from "./Money";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
-import { IconAlert, IconChevron, IconWallet } from "../ui/icons";
+import { CategoryIcon } from "../ui/categoryIcons";
+import { IconAlert, IconChevron, IconHand, IconRocket, IconWallet } from "../ui/icons";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -33,9 +34,9 @@ export function DashboardPage() {
   if (instruments.length === 0 && cash.length === 0) {
     return (
       <div className="mx-auto max-w-2xl pt-6">
-        <PageHeader title="Hey there" emoji="👋" sub="Kaasu tracks your salary, spending and every investment you own, privately." />
+        <PageHeader title="Hey there" sub="Kaasu tracks your salary, spending and every investment you own, privately." />
         <EmptyState
-          emoji="🚀"
+          icon={<IconRocket size={34} className="text-accent" />}
           title="Let's get your money map going"
           action={
             <>
@@ -79,7 +80,7 @@ export function DashboardPage() {
         <div className="display text-3xl font-extrabold sm:text-4xl">
           {greeting()}{" "}
           <motion.span className="inline-block origin-[70%_70%]" animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ duration: 1.2, delay: 0.3 }}>
-            👋
+            <IconHand size={30} className="text-accent" />
           </motion.span>
         </div>
       </div>
@@ -184,7 +185,7 @@ function MoneySnapshot() {
           <div className="flex flex-wrap gap-2">
             {top.map((c) => (
               <div key={c.category.id} className="flex items-center gap-2 rounded-2xl bg-sunken px-3 py-2">
-                <span className="text-lg">{c.category.emoji}</span>
+                <CategoryIcon id={c.category.id} size={18} />
                 <span className="money text-sm font-bold num">{formatCompact(c.amount)}</span>
               </div>
             ))}

@@ -7,7 +7,8 @@ import { addMonthsToKey, formatDate, formatMonth, monthKey } from "../domain/dat
 import { formatCompact, formatINR, formatPct } from "../domain/money";
 import { Badge, Button, Card, EmptyState, Field, IconTile, Meter, Money, PageHeader, Select, Sheet, cx } from "../ui/components";
 import { useData } from "../ui/data";
-import { IconChevron, IconFlame, IconParty, IconPlus, IconTarget, IconUpload, IconWallet } from "../ui/icons";
+import { CategoryIcon } from "../ui/categoryIcons";
+import { IconBanknote, IconCalendarClock, IconCheckCircle, IconChevron, IconFlame, IconParty, IconPlus, IconTarget, IconUpload, IconWallet } from "../ui/icons";
 import { MoneyInput, NumberInput } from "../ui/inputs";
 import { useCommitments } from "../ui/money";
 import { EntrySheet, PaydaySheet, StatementSheet } from "../ui/MoneySheets";
@@ -48,7 +49,6 @@ export function MoneyPage() {
     <>
       <PageHeader
         title="Money"
-        emoji="💸"
         sub="Salary in, spending out, and what's safe to spend."
         action={
           <div className="flex gap-2">
@@ -64,7 +64,7 @@ export function MoneyPage() {
 
       {empty ? (
         <EmptyState
-          emoji="👛"
+          icon={<IconWallet size={34} className="text-accent" />}
           title="Let's set up your money month"
           action={
             <>
@@ -154,7 +154,9 @@ export function MoneyPage() {
                 <ul className="flex flex-col gap-3.5">
                   {lines.map((l) => (
                     <li key={l.category.id} className="flex items-center gap-3">
-                      <IconTile color={l.category.color}>{l.category.emoji}</IconTile>
+                      <IconTile color={l.category.color}>
+                        <CategoryIcon id={l.category.id} />
+                      </IconTile>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2 text-sm">
                           <span className="truncate font-semibold">{l.category.label}</span>
@@ -166,7 +168,7 @@ export function MoneyPage() {
                         <div className="mt-1.5">
                           <Meter value={l.spent} max={l.budget || l.spent || 1} size="sm" tone={l.status === "over" ? "loss" : l.status === "near" ? "warn" : l.status === "none" ? "brass" : "accent"} label={`${l.category.label} budget used`} />
                         </div>
-                        {l.status === "over" && <div className="mt-1 text-[11px] font-semibold text-loss">Over by {formatINR(l.spent - l.budget)} 😬</div>}
+                        {l.status === "over" && <div className="mt-1 text-[11px] font-semibold text-loss">Over by {formatINR(l.spent - l.budget)}</div>}
                       </div>
                     </li>
                   ))}
@@ -242,7 +244,7 @@ export function PaydayBanner({ status, onOpen, onSetup }: { status: ReturnType<t
   if (status.state === "not-set") {
     return (
       <button onClick={onSetup} className="flex items-center gap-3 rounded-3xl border border-dashed border-accent/40 bg-accent-soft/40 px-4 py-3 text-left">
-        <span className="text-2xl">🗓️</span>
+        <IconCalendarClock size={24} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">Set your payday</span>
           <span className="block text-xs text-muted">Get a nudge when salary lands, with a plan for every rupee.</span>
@@ -261,7 +263,7 @@ export function PaydayBanner({ status, onOpen, onSetup }: { status: ReturnType<t
         className="flex items-center gap-3 rounded-3xl bg-lime px-4 py-3.5 text-left text-lime-ink shadow-card"
       >
         <motion.span animate={{ rotate: [0, -12, 12, -6, 0] }} transition={{ repeat: Infinity, repeatDelay: 2.5, duration: 0.6 }} className="text-3xl">
-          💸
+          <IconBanknote size={30} />
         </motion.span>
         <span className="min-w-0 flex-1">
           <span className="block font-extrabold">Payday! Did your salary land?</span>
@@ -283,7 +285,7 @@ export function PaydayBanner({ status, onOpen, onSetup }: { status: ReturnType<t
   }
   return (
     <button onClick={onOpen} className="flex items-center gap-3 rounded-3xl border border-gain/30 bg-gain-soft px-4 py-3 text-left">
-      <span className="text-2xl">✅</span>
+      <IconCheckCircle size={24} className="shrink-0 text-gain" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold">
           Salary in · <span className="money">{formatINR(status.amount)}</span> on {formatDate(status.on, { year: false })}
@@ -333,7 +335,9 @@ function EntryList({ entries, onOpen }: { entries: CashEntry[]; onOpen: (e: Cash
           <li key={e.id}>
             {header && <div className="px-5 pt-3 pb-1 text-[11px] font-bold tracking-wider text-faint uppercase">{formatDate(e.date, { year: false })}</div>}
             <button onClick={() => onOpen(e)} className="flex w-full items-center gap-3 px-5 py-2 text-left hover:bg-sunken/60">
-              <IconTile color={cat.color}>{cat.emoji}</IconTile>
+              <IconTile color={cat.color}>
+                <CategoryIcon id={cat.id} />
+              </IconTile>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{e.note || cat.label}</span>
                 <span className="block text-xs text-muted">
@@ -359,7 +363,7 @@ function BudgetsSheet({ onClose }: { onClose: () => void }) {
     <Sheet
       open
       onClose={onClose}
-      title="Monthly budgets 🎯"
+      title="Monthly budgets"
       footer={
         <Button
           variant="primary"
@@ -378,7 +382,9 @@ function BudgetsSheet({ onClose }: { onClose: () => void }) {
       <ul className="flex flex-col gap-2">
         {CATEGORIES.filter((c) => c.kind === "expense").map((c) => (
           <li key={c.id} className="flex items-center gap-3">
-            <IconTile color={c.color}>{c.emoji}</IconTile>
+            <IconTile color={c.color}>
+              <CategoryIcon id={c.id} />
+            </IconTile>
             <span className="min-w-0 flex-1 text-sm font-semibold">{c.label}</span>
             <div className="w-36">
               <MoneyInput value={b[c.id] ?? null} onChange={(p) => setB({ ...b, [c.id]: p ?? 0 })} placeholder="—" />
@@ -401,7 +407,7 @@ export function SalarySetupSheet({ onClose }: { onClose: () => void }) {
     <Sheet
       open
       onClose={onClose}
-      title="Your payday 🗓️"
+      title="Your payday"
       footer={
         <>
           {settings.salary && (

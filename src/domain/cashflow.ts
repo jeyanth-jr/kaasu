@@ -29,34 +29,37 @@ export interface CashEntry {
   createdAt: string;
 }
 
+export type CategoryIconKey = "briefcase" | "party" | "undo" | "banknote" | "home" | "cart" | "utensils" | "bus" | "zap" | "tv" | "bag" | "pill" | "film" | "plane" | "users" | "landmark" | "book" | "gift" | "receipt";
+
 export interface Category {
   id: string;
   label: string;
-  emoji: string;
+  /** Key into the icon set (kept as a string so the domain layer stays UI-free). */
+  icon: CategoryIconKey;
   color: string;
   kind: EntryKind;
 }
 
 export const CATEGORIES: Category[] = [
-  { id: "salary", label: "Salary", emoji: "💼", color: "#10b981", kind: "income" },
-  { id: "bonus", label: "Bonus", emoji: "🎉", color: "#22c55e", kind: "income" },
-  { id: "refund", label: "Refunds", emoji: "↩️", color: "#14b8a6", kind: "income" },
-  { id: "other-income", label: "Other income", emoji: "💸", color: "#84cc16", kind: "income" },
-  { id: "rent", label: "Rent", emoji: "🏠", color: "#6366f1", kind: "expense" },
-  { id: "groceries", label: "Groceries", emoji: "🛒", color: "#22c55e", kind: "expense" },
-  { id: "food", label: "Food & dining", emoji: "🍜", color: "#f97316", kind: "expense" },
-  { id: "transport", label: "Transport", emoji: "🛵", color: "#0ea5e9", kind: "expense" },
-  { id: "bills", label: "Bills & recharges", emoji: "💡", color: "#eab308", kind: "expense" },
-  { id: "subscriptions", label: "Subscriptions", emoji: "📺", color: "#a855f7", kind: "expense" },
-  { id: "shopping", label: "Shopping", emoji: "🛍️", color: "#ec4899", kind: "expense" },
-  { id: "health", label: "Health", emoji: "💊", color: "#ef4444", kind: "expense" },
-  { id: "fun", label: "Fun & going out", emoji: "🎬", color: "#d946ef", kind: "expense" },
-  { id: "travel", label: "Travel", emoji: "✈️", color: "#06b6d4", kind: "expense" },
-  { id: "family", label: "Family", emoji: "👨‍👩‍👧", color: "#f43f5e", kind: "expense" },
-  { id: "emi", label: "EMIs & loans", emoji: "🏦", color: "#64748b", kind: "expense" },
-  { id: "education", label: "Learning", emoji: "📚", color: "#8b5cf6", kind: "expense" },
-  { id: "gifts", label: "Gifts", emoji: "🎁", color: "#fb7185", kind: "expense" },
-  { id: "other", label: "Other", emoji: "🧾", color: "#94a3b8", kind: "expense" },
+  { id: "salary", label: "Salary", icon: "briefcase", color: "#10b981", kind: "income" },
+  { id: "bonus", label: "Bonus", icon: "party", color: "#22c55e", kind: "income" },
+  { id: "refund", label: "Refunds", icon: "undo", color: "#14b8a6", kind: "income" },
+  { id: "other-income", label: "Other income", icon: "banknote", color: "#84cc16", kind: "income" },
+  { id: "rent", label: "Rent", icon: "home", color: "#6366f1", kind: "expense" },
+  { id: "groceries", label: "Groceries", icon: "cart", color: "#22c55e", kind: "expense" },
+  { id: "food", label: "Food & dining", icon: "utensils", color: "#f97316", kind: "expense" },
+  { id: "transport", label: "Transport", icon: "bus", color: "#0ea5e9", kind: "expense" },
+  { id: "bills", label: "Bills & recharges", icon: "zap", color: "#eab308", kind: "expense" },
+  { id: "subscriptions", label: "Subscriptions", icon: "tv", color: "#a855f7", kind: "expense" },
+  { id: "shopping", label: "Shopping", icon: "bag", color: "#ec4899", kind: "expense" },
+  { id: "health", label: "Health", icon: "pill", color: "#ef4444", kind: "expense" },
+  { id: "fun", label: "Fun & going out", icon: "film", color: "#d946ef", kind: "expense" },
+  { id: "travel", label: "Travel", icon: "plane", color: "#06b6d4", kind: "expense" },
+  { id: "family", label: "Family", icon: "users", color: "#f43f5e", kind: "expense" },
+  { id: "emi", label: "EMIs & loans", icon: "landmark", color: "#64748b", kind: "expense" },
+  { id: "education", label: "Learning", icon: "book", color: "#8b5cf6", kind: "expense" },
+  { id: "gifts", label: "Gifts", icon: "gift", color: "#fb7185", kind: "expense" },
+  { id: "other", label: "Other", icon: "receipt", color: "#94a3b8", kind: "expense" },
 ];
 
 export const categoryById = new Map(CATEGORIES.map((c) => [c.id, c]));

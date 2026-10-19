@@ -308,7 +308,7 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     const lastDay = mBack === 0 ? Number(asOf.slice(8)) : 28;
     const payday = withDay(addMonths(asOf, -mBack), 1);
     if (mBack > 0 || payday <= asOf) {
-      cash.push({ id: cid(), date: payday, kind: "income", amount: toPaise(85000), category: "salary", note: "Salary · Acme Tech", source: "sample", createdAt: created });
+      cash.push({ id: cid(), date: payday, kind: "income", amount: toPaise(140000), category: "salary", note: "Salary · Acme Tech", source: "sample", createdAt: created });
     }
     for (const [cat, times, typical, notes] of spend) {
       for (let i = 0; i < times; i++) {
@@ -333,7 +333,7 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
   await saveSettings({
     sampleLoaded: true,
     // Only fill payday/budgets if you haven't set your own.
-    salary: cur?.salary ?? { amount: toPaise(85000), day: 1, employer: "Acme Tech (sample)" },
+    salary: cur?.salary ?? { amount: toPaise(140000), day: 1, employer: "Acme Tech (sample)" },
     categoryBudgets:
       cur?.categoryBudgets && Object.keys(cur.categoryBudgets).length
         ? cur.categoryBudgets

@@ -115,13 +115,12 @@ export function Card({ title, action, children, className, pad = true, icon }: {
   );
 }
 
-export function PageHeader({ title, sub, action, emoji }: { title: string; sub?: ReactNode; action?: ReactNode; emoji?: string }) {
+export function PageHeader({ title, sub, action }: { title: string; sub?: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="display text-[2rem] leading-none font-extrabold sm:text-[2.6rem]">
           {title}
-          {emoji && <span className="ml-2 inline-block">{emoji}</span>}
         </h1>
         {sub && <p className="mt-2 text-sm text-muted">{sub}</p>}
       </div>
@@ -152,11 +151,11 @@ export function Badge({ children, tone = "neutral", className }: { children: Rea
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
-export function EmptyState({ title, children, action, emoji, icon }: { title: string; children?: ReactNode; action?: ReactNode; emoji?: string; icon?: ReactNode }) {
+export function EmptyState({ title, children, action, icon }: { title: string; children?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   return (
     <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-line bg-surface/60 px-6 py-12 text-center">
-      <motion.div initial={{ scale: 0.6, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }} className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-accent-soft text-4xl">
-        {icon ?? emoji ?? <IconSparkles size={30} className="text-accent" />}
+      <motion.div initial={{ scale: 0.6, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }} className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-accent-soft">
+        {icon ?? <IconSparkles size={30} className="text-accent" />}
       </motion.div>
       <h3 className="display text-2xl font-bold">{title}</h3>
       {children && <div className="mt-2 max-w-md text-sm text-muted">{children}</div>}

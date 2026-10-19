@@ -19,8 +19,12 @@ import {
   IconList,
   IconMoon,
   IconPie,
+  IconBanknote,
+  IconBriefcase,
   IconPlus,
   IconReceipt,
+  IconReceiptPlain,
+  IconTrendUp,
   IconRepeat,
   IconRefresh,
   IconSettings,
@@ -306,13 +310,13 @@ function AddChooser({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { settings, cash, asOf } = useData();
   const pd = paydayStatus(settings.salary, cash, asOf);
   const tiles = [
-    { label: "Spent", sub: "Log an expense", emoji: "💸", onClick: () => openMoney("expense"), tone: "from-[#ff6b8b] to-[#ff9f6b]" },
-    { label: "Got money", sub: "Income, refund", emoji: "🤑", onClick: () => openMoney("income"), tone: "from-[#10b981] to-[#84cc16]" },
-    { label: "Investment", sub: "Buy, sell, SIP, FD…", emoji: "📈", onClick: () => openAdd(), tone: "from-[#6a46ff] to-[#d946ef]" },
-    ...(pd.state === "due" || pd.state === "upcoming" ? [{ label: "Salary in", sub: "Run payday", emoji: "💼", onClick: () => openPayday(), tone: "from-[#0ea5e9] to-[#6366f1]" }] : []),
+    { label: "Spent", sub: "Log an expense", icon: IconReceiptPlain, onClick: () => openMoney("expense"), tone: "from-[#ff6b8b] to-[#ff9f6b]" },
+    { label: "Got money", sub: "Income, refund", icon: IconBanknote, onClick: () => openMoney("income"), tone: "from-[#10b981] to-[#84cc16]" },
+    { label: "Investment", sub: "Buy, sell, SIP, FD…", icon: IconTrendUp, onClick: () => openAdd(), tone: "from-[#6a46ff] to-[#d946ef]" },
+    ...(pd.state === "due" || pd.state === "upcoming" ? [{ label: "Salary in", sub: "Run payday", icon: IconBriefcase, onClick: () => openPayday(), tone: "from-[#0ea5e9] to-[#6366f1]" }] : []),
   ];
   return (
-    <Sheet open={open} onClose={onClose} title="Add something ✨">
+    <Sheet open={open} onClose={onClose} title="Add something">
       <div className="grid grid-cols-2 gap-3 pb-2">
         {tiles.map((t, i) => (
           <motion.button
@@ -327,7 +331,7 @@ function AddChooser({ open, onClose }: { open: boolean; onClose: () => void }) {
             }}
             className={cx("flex flex-col items-start gap-6 rounded-3xl bg-gradient-to-br p-4 text-left text-white shadow-card", t.tone)}
           >
-            <span className="text-3xl">{t.emoji}</span>
+            <t.icon size={30} strokeWidth={2.2} />
             <span>
               <span className="block text-base font-extrabold">{t.label}</span>
               <span className="block text-xs font-medium text-white/85">{t.sub}</span>

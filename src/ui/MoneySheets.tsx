@@ -6,6 +6,7 @@ import { CATEGORIES, categoryOf, guessStatementMapping, parseStatement, type Cas
 import { parseCsvText } from "../domain/csv";
 import { formatDate, monthKey, todayISO } from "../domain/dates";
 import { formatINR } from "../domain/money";
+import { CategoryIcon, CommitmentIcon } from "./categoryIcons";
 import { Badge, Button, Callout, Field, Input, Select, Sheet, Toggle, cx } from "./components";
 import { useData } from "./data";
 import { IconCheck, IconParty } from "./icons";
@@ -56,7 +57,7 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
     <Sheet
       open={open}
       onClose={onClose}
-      title={entry ? "Edit entry" : kind === "expense" ? "Spent money 💸" : "Got money 🤑"}
+      title={entry ? "Edit entry" : kind === "expense" ? "Spent money" : "Got money"}
       footer={
         <>
           {entry && (
@@ -111,7 +112,7 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
                 className={cx("flex flex-col items-center gap-1 rounded-2xl border px-1 py-2 text-[11px] font-semibold transition", category === c.id ? "border-transparent text-ink ring-2" : "border-line text-muted hover:border-accent/40")}
                 style={category === c.id ? { background: `color-mix(in oklab, ${c.color} 18%, transparent)`, ["--tw-ring-color" as string]: c.color } : undefined}
               >
-                <span className="text-xl">{c.emoji}</span>
+                <CategoryIcon id={c.id} size={20} />
                 <span className="line-clamp-1 w-full text-center">{c.label}</span>
               </button>
             ))}
@@ -204,7 +205,7 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet
       open={open}
       onClose={onClose}
-      title={step === "confirm" ? "Payday! 💸" : "Make it work 🧠"}
+      title={step === "confirm" ? "Payday!" : "Make it work"}
       footer={
         step === "confirm" ? (
           <Button variant="primary" size="lg" onClick={confirm} disabled={!amount}>
@@ -280,7 +281,7 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
                       }}
                       className={cx("flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition", done[i.id] ? "border-gain/30 bg-gain-soft" : "border-line hover:border-accent/40")}
                     >
-                      <span className="text-xl">{i.emoji}</span>
+                      <CommitmentIcon kind={i.kind} size={20} />
                       <span className={cx("min-w-0 flex-1 text-sm font-semibold", done[i.id] && "text-muted line-through")}>{i.label}</span>
                       <span className="text-sm font-bold num">{formatINR(i.amount)}</span>
                       <span className={cx("grid h-6 w-6 place-items-center rounded-full border-2", done[i.id] ? "border-gain bg-gain text-white" : "border-line")}>
@@ -443,7 +444,7 @@ export function StatementSheet({ open, onClose }: { open: boolean; onClose: () =
                       >
                         {CATEGORIES.filter((c) => c.kind === r.kind).map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.emoji} {c.label}
+                            {c.label}
                           </option>
                         ))}
                       </select>
