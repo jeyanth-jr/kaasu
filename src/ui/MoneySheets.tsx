@@ -2,34 +2,32 @@ import confetti from "canvas-confetti";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { confirmSalary, deleteEntry, importStatement, saveEntry, setChecklistItem } from "../db/cash";
+import { saveSettings } from "../db/db";
 import { CATEGORIES, categoryOf, guessStatementMapping, parseStatement, type CashEntry, type EntryKind, type StatementMapping, type StatementRow } from "../domain/cashflow";
 import { parseCsvText } from "../domain/csv";
 import { formatDate, monthKey, todayISO } from "../domain/dates";
 import { formatINR } from "../domain/money";
 import { CategoryIcon, CommitmentIcon } from "./categoryIcons";
-import { Badge, Button, Callout, Field, Input, Select, Sheet, Toggle, cx } from "./components";
+import { Badge, Button, Callout, Field, Input, Sheet, Toggle, cx } from "./components";
+import { AccountPicker, defaultAccountId, useAccounts } from "./accounts";
 import { useData } from "./data";
 import { IconCheck, IconParty } from "./icons";
 import { useCommitments } from "./money";
 
-function useCashAccounts() {
-  const { instruments } = useData();
-  return instruments.filter((i) => i.kind === "cash" && !i.archived);
-}
 
 // ---------------------------------------------------------------------------
 // Quick add: spent / got money
 
 export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry }: { open: boolean; onClose: () => void; kind?: EntryKind; entry?: CashEntry }) {
-  const accounts = useCashAccounts();
+  const { accounts } = useAccounts();
   const { settings } = useData();
   const [kind, setKind] = useState<EntryKind>(entry?.kind ?? initialKind);
   const [amount, setAmount] = useState<number | null>(entry?.amount ?? null);
   const [category, setCategory] = useState(entry?.category ?? (initialKind === "income" ? "salary" : "food"));
   const [date, setDate] = useState(entry?.date ?? todayISO());
   const [note, setNote] = useState(entry?.note ?? "");
-  const [accountId, setAccountId] = useState(entry?.accountId ?? settings.salary?.accountId ?? "");
-  const [post, setPost] = useState(entry ? !!entry.linkedTxnId : false);
+  const preferred = () => (entry ? entry.accountId ?? "" : defaultAccountId(accounts, settings.lastAccountId, settings.salary?.accountId));
+  const [accountId, setAccountId] = useState(preferred);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,8 +37,7 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
     setCategory(entry?.category ?? (initialKind === "income" ? "salary" : "food"));
     setDate(entry?.date ?? todayISO());
     setNote(entry?.note ?? "");
-    setAccountId(entry?.accountId ?? settings.salary?.accountId ?? "");
-    setPost(entry ? !!entry.linkedTxnId : false);
+    setAccountId(preferred());
     setError(null);
   }, [open, entry, initialKind]);
 
@@ -49,7 +46,10 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
   async function save() {
     if (!amount || amount <= 0) return setError("How much?");
     if (date > todayISO()) return setError("That's in the future: add it when it happens.");
+    // Choosing an account moves its balance. An older entry that never posted stays as it was unless the account changes.
+    const post = !!accountId && (!entry || !!entry.linkedTxnId || entry.accountId !== accountId);
     await saveEntry({ date, kind, amount, category, note, accountId: accountId || undefined, postToAccount: post }, entry);
+    if (accountId) await saveSettings({ lastAccountId: accountId });
     onClose();
   }
 
@@ -140,20 +140,9 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
           <Field label="Note">{(id) => <Input id={id} value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === "expense" ? "Swiggy, Uber…" : "Optional"} />}</Field>
         </div>
         {accounts.length > 0 && (
-          <div className="rounded-2xl border border-line px-3 py-1">
-            <Field label="Account">
-              {(id) => (
-                <Select id={id} value={accountId} onChange={(e) => setAccountId(e.target.value)} className="mt-1">
-                  <option value="">Not tracked</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            {accountId && <Toggle checked={post} onChange={setPost} label="Update this account's balance" hint={kind === "expense" ? "Records a withdrawal in Holdings" : "Records a deposit in Holdings"} />}
+          <div>
+            <div className="mb-1 text-xs font-semibold text-muted">{kind === "expense" ? "Paid from" : "Received in"}</div>
+            <AccountPicker value={accountId} onChange={setAccountId} />
           </div>
         )}
       </div>
@@ -186,7 +175,7 @@ function BigAmount({ value, onChange }: { value: number | null; onChange: (p: nu
 
 export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { settings, paydays, cash } = useData();
-  const accounts = useCashAccounts();
+  const { accounts } = useAccounts();
   const month = monthKey(todayISO());
   const record = paydays.find((p) => p.month === month);
   // Any salary credit this month counts (payday flow, manual entry or statement import).
@@ -196,7 +185,6 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
   const [amount, setAmount] = useState<number | null>(settings.salary?.amount ?? null);
   const [date, setDate] = useState(todayISO());
   const [accountId, setAccountId] = useState(settings.salary?.accountId ?? "");
-  const [post, setPost] = useState(true);
   const salary = received?.amount ?? amount ?? 0;
   const items = useCommitments(month, salary);
   const done = record?.done ?? {};
@@ -213,7 +201,8 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
 
   async function confirm() {
     if (!amount) return;
-    await confirmSalary({ date, amount, accountId: accountId || undefined, postToAccount: post && !!accountId, employer: settings.salary?.employer });
+    await confirmSalary({ date, amount, accountId: accountId || undefined, postToAccount: !!accountId, employer: settings.salary?.employer });
+    if (accountId) await saveSettings({ lastAccountId: accountId });
     burst();
     setStep("plan");
   }
@@ -256,20 +245,13 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Credited on">{(id) => <Input id={id} type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} />}</Field>
-            <Field label="Into">
-              {(id) => (
-                <Select id={id} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                  <option value="">Not tracked</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
           </div>
-          {accountId && <Toggle checked={post} onChange={setPost} label="Add it to that account's balance" />}
+          {accounts.length > 0 && (
+            <div>
+              <div className="mb-1 text-xs font-semibold text-muted">Credited to</div>
+              <AccountPicker value={accountId} onChange={setAccountId} />
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -328,7 +310,7 @@ function MiniStat({ label, value, tone }: { label: string; value: string; tone?:
 
 export function burst() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const colors = ["#6a46ff", "#d946ef", "#c4f135", "#10b981", "#f5b301"];
+  const colors = ["#e3b94d", "#f6dc8a", "#2f62a8", "#17909c", "#3ddba0"];
   void confetti({ particleCount: 110, spread: 75, origin: { y: 0.7 }, colors, disableForReducedMotion: true });
 }
 
@@ -336,7 +318,7 @@ export function burst() {
 // Bank statement import
 
 export function StatementSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const accounts = useCashAccounts();
+  const { accounts } = useAccounts();
   const { cash } = useData();
   const [fileName, setFileName] = useState("");
   const [grid, setGrid] = useState<string[][] | null>(null);
@@ -418,20 +400,10 @@ export function StatementSheet({ open, onClose }: { open: boolean; onClose: () =
               </span>
             </div>
             {accounts.length > 0 && (
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Field label="Which account is this?">
-                  {(id) => (
-                    <Select id={id} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                      <option value="">Don't link</option>
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </Field>
-                {accountId && <Toggle checked={post} onChange={setPost} label="Also update its balance" hint="Leave off if you track that balance another way" />}
+              <div className="flex flex-col gap-1">
+                <div className="text-xs font-semibold text-muted">Which account is this statement from?</div>
+                <AccountPicker value={accountId} onChange={setAccountId} noneLabel="Don't link" />
+                {accountId && <Toggle checked={post} onChange={setPost} label="Also change its balance" hint="Leave off if the balance you entered already includes these lines. Turn on if you set the account up before this statement began." />}
               </div>
             )}
             <div className="max-h-[45vh] overflow-auto rounded-2xl border border-line">

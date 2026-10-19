@@ -7,7 +7,7 @@ import { useDemo } from "../sync/demo";
 import { useSyncState } from "../sync/state";
 import { Button, Sheet, cx } from "./components";
 import { useData } from "./data";
-import { IconCloud, IconFlag, IconHome, IconLayers, IconPlus, IconRepeat, IconTrophy, IconUpload, IconWallet } from "./icons";
+import { IconCloud, IconFlag, IconHome, IconLandmark, IconLayers, IconPlus, IconRepeat, IconTarget, IconTrophy, IconUpload, IconWallet } from "./icons";
 
 interface Slide {
   icon: typeof IconHome;
@@ -38,6 +38,30 @@ const SLIDES: Slide[] = [
     ],
   },
   {
+    icon: IconLandmark,
+    color: "var(--c-cash)",
+    title: "Accounts: every bank balance",
+    lead: "Track as many accounts as you have, and where each rupee went.",
+    points: [
+      "Add each bank account or wallet with today's balance. They all show side by side with a total.",
+      "On every spend, income and investment you pick the account. Its balance moves, and its statement lists each transaction.",
+      "Transfers between your own accounts never count as spending. \"Match bank balance\" fixes drift in one tap.",
+    ],
+    actions: [{ label: "Add a bank account", to: "/accounts?new=1", primary: true }],
+  },
+  {
+    icon: IconTarget,
+    color: "var(--c-debt)",
+    title: "Goals: short and long term",
+    lead: "Save for a trip, a phone, a home or retirement.",
+    points: [
+      "Set a target and a date. Kaasu works out what to put aside each month and whether you're on track.",
+      "Add money as you go, or link holdings so a goal grows with the market. Milestones celebrate.",
+      "Short term means up to three years out; long term is anything further.",
+    ],
+    actions: [{ label: "Set a goal", to: "/goals?new=1", primary: true }],
+  },
+  {
     icon: IconRepeat,
     color: "var(--c-gold)",
     title: "Plans & debt",
@@ -58,7 +82,7 @@ const SLIDES: Slide[] = [
   {
     icon: IconTrophy,
     color: "var(--c-other)",
-    title: "Goals and wins",
+    title: "Monthly savings goal and wins",
     lead: "Saving should feel good.",
     points: ["Set a monthly savings goal. The ring fills as you invest, SIP or deposit.", "Milestones at 25, 50, 75 and 100% celebrate with confetti. So do streaks, net-worth levels and emergency-fund runway.", "Tap the ring to replay a celebration, or open Wins to see what you've earned."],
   },
@@ -67,7 +91,7 @@ const SLIDES: Slide[] = [
     color: "var(--accent)",
     title: "The + button adds anything",
     lead: "Always one tap away, on every screen.",
-    points: ["Spent: log an expense. Got money: income or a refund.", "Investment: buy, sell, SIP, deposit, interest. Type a stock name or fund name and pick it.", "Salary in appears when payday is due."],
+    points: ["Spent: log an expense. Got money: income or a refund. Pick the account it went through.", "Investment: buy, sell, SIP, deposit, interest. Type a stock name or fund name and pick it.", "Press Ctrl K (or /) anywhere to search holdings, goals and accounts, or start any action."],
   },
   {
     icon: IconUpload,

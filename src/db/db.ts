@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type { CashEntry } from "../domain/cashflow";
+import type { Goal, GoalFund } from "../domain/goals";
 import type {
   Instrument,
   Liability,
@@ -74,6 +75,8 @@ export class KaasuDB extends Dexie {
   imports!: Table<ImportBatch, string>;
   cash!: Table<CashEntry, string>;
   paydays!: Table<PaydayRecord, string>;
+  goals!: Table<Goal, string>;
+  goalFunds!: Table<GoalFund, string>;
   outbox!: Table<OutboxEntry, string>;
   syncMeta!: Table<SyncMeta, string>;
 
@@ -98,6 +101,12 @@ export class KaasuDB extends Dexie {
     this.version(3).stores({
       outbox: "key",
       syncMeta: "id",
+    });
+    // v4: savings goals, and links from bank-account transactions to what they paid for.
+    this.version(4).stores({
+      txns: "id, instrumentId, date, type, importBatchId, [instrumentId+date], fundsTxnId, transferId",
+      goals: "id, term, archived",
+      goalFunds: "id, goalId, date",
     });
   }
 }

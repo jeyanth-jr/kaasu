@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { saveSettings } from "../db/db";
@@ -7,6 +7,7 @@ import { budgetLines, categoryOf, CATEGORIES, monthSummary, paydayStatus, safeTo
 import { addMonthsToKey, formatDate, formatMonth, monthKey } from "../domain/dates";
 import { formatCompact, formatINR, formatPct } from "../domain/money";
 import { Badge, Button, Card, EmptyState, Field, IconTile, Meter, Money, PageHeader, Select, Sheet, cx } from "../ui/components";
+import { AccountTag } from "../ui/accounts";
 import { useData } from "../ui/data";
 import { CategoryIcon } from "../ui/categoryIcons";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
@@ -22,6 +23,9 @@ export function MoneyPage() {
   const [payday, setPayday] = useState(false);
   const [params, setParams] = useSearchParams();
   const [statement, setStatementOpen] = useState(params.get("statement") === "1");
+  useEffect(() => {
+    if (params.get("statement") === "1") setStatementOpen(true);
+  }, [params]);
   const setStatement = (open: boolean) => {
     setStatementOpen(open);
     if (!open && params.has("statement")) setParams({}, { replace: true });
@@ -106,7 +110,7 @@ export function MoneyPage() {
             </div>
             <div className="flex items-center gap-2">
               {streak > 0 && (
-                <Badge tone="lime">
+                <Badge tone="gold">
                   <IconFlame size={12} /> {streak}-month savings streak
                 </Badge>
               )}
@@ -133,7 +137,7 @@ export function MoneyPage() {
             </div>
             <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/20">
               <motion.div
-                className="h-full rounded-full bg-lime"
+                className="h-full rounded-full bg-gold"
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, sts.income - sts.committed > 0 ? (sts.spent / (sts.income - sts.committed)) * 100 : 100)}%` }}
                 transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
@@ -278,7 +282,7 @@ export function PaydayBanner({ status, onOpen, onSetup }: { status: ReturnType<t
         initial={{ scale: 0.97, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         whileTap={{ scale: 0.98 }}
-        className="flex items-center gap-3 rounded-3xl bg-lime px-4 py-3.5 text-left text-lime-ink shadow-card"
+        className="flex items-center gap-3 rounded-3xl bg-gold px-4 py-3.5 text-left text-gold-ink shadow-card"
       >
         <motion.span animate={{ rotate: [0, -12, 12, -6, 0] }} transition={{ repeat: Infinity, repeatDelay: 2.5, duration: 0.6 }} className="text-3xl">
           <IconBanknote size={30} />
@@ -361,8 +365,12 @@ function EntryList({ entries, onOpen }: { entries: CashEntry[]; onOpen: (e: Cash
                 <span className="block text-xs text-muted">
                   {cat.label}
                   {e.source === "statement" && " · statement"}
-                  {e.linkedTxnId && " · posted to account"}
                 </span>
+                {e.accountId && (
+                  <span className="mt-0.5 block">
+                    <AccountTag id={e.accountId} />
+                  </span>
+                )}
               </span>
               <Money p={e.kind === "income" ? e.amount : -e.amount} sign={e.kind === "income"} className={cx("text-sm font-bold", e.kind === "income" && "text-gain")} />
             </button>

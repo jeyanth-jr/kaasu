@@ -133,7 +133,7 @@ export function Onboarding() {
               )}
               {step === 3 && (
                 <>
-                  <span className="grid h-14 w-14 place-items-center rounded-3xl bg-lime text-lime-ink">
+                  <span className="grid h-14 w-14 place-items-center rounded-3xl bg-gold text-gold-ink">
                     <IconCheck size={28} strokeWidth={3} />
                   </span>
                   <div>

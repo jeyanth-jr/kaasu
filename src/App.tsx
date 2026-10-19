@@ -24,12 +24,15 @@ import {
   IconBanknote,
   IconBriefcase,
   IconHelp,
+  IconLandmark,
+  IconTarget,
   IconPlus,
   IconReceipt,
   IconReceiptPlain,
   IconTrendUp,
   IconRepeat,
   IconRefresh,
+  IconSearch,
   IconSettings,
   IconSparkles,
   IconSun,
@@ -42,6 +45,7 @@ import { endDemo, useDemo } from "./sync/demo";
 import { useSyncActive, useSyncState } from "./sync/state";
 import { Logo } from "./ui/Logo";
 import { Onboarding } from "./ui/Onboarding";
+import { CommandPalette, usePaletteShortcut } from "./ui/CommandPalette";
 import { Tour, TourAutoStart } from "./ui/Tour";
 
 // Pages load on demand so the first screen arrives quickly on a phone.
@@ -56,6 +60,8 @@ const TaxPage = lazy(() => import("./pages/Tax").then((m) => ({ default: m.TaxPa
 const CalendarPage = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.CalendarPage })));
 const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const LandingPage = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
+const AccountsPage = lazy(() => import("./pages/Accounts").then((m) => ({ default: m.AccountsPage })));
+const GoalsPage = lazy(() => import("./pages/Goals").then((m) => ({ default: m.GoalsPage })));
 const HelpPage = lazy(() => import("./pages/Help").then((m) => ({ default: m.HelpPage })));
 const LegalPage = lazy(() => import("./pages/Legal").then((m) => ({ default: m.LegalPage })));
 
@@ -64,12 +70,13 @@ const LegalPage = lazy(() => import("./pages/Legal").then((m) => ({ default: m.L
 
 interface AddCtx {
   openTour: () => void;
+  openPalette: () => void;
   openAdd: (opts?: { instrumentId?: string; txnId?: string }) => void;
   openMoney: (kind: EntryKind) => void;
   openPayday: () => void;
   openChooser: () => void;
 }
-const AddContext = createContext<AddCtx>({ openTour: () => {}, openAdd: () => {}, openMoney: () => {}, openPayday: () => {}, openChooser: () => {} });
+const AddContext = createContext<AddCtx>({ openTour: () => {}, openPalette: () => {}, openAdd: () => {}, openMoney: () => {}, openPayday: () => {}, openChooser: () => {} });
 export const useAdd = () => useContext(AddContext);
 export const useTour = () => useContext(AddContext);
 
@@ -90,7 +97,7 @@ function useTheme(): [Theme, (t: Theme) => void] {
     const apply = () => {
       const dark = theme === "dark" || (theme === "system" && mq.matches);
       document.documentElement.classList.toggle("dark", dark);
-      document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute("content", dark ? "#0c0a18" : "#f6f4ff");
+      document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute("content", dark ? "#06080e" : "#f2efe8");
     };
     apply();
     try {
@@ -107,6 +114,8 @@ function useTheme(): [Theme, (t: Theme) => void] {
 const EVERYDAY = [
   { to: "/", label: "Home", icon: IconHome },
   { to: "/money", label: "Money", icon: IconWallet },
+  { to: "/accounts", label: "Accounts", icon: IconLandmark },
+  { to: "/goals", label: "Goals", icon: IconTarget },
   { to: "/plans", label: "Plans & debt", icon: IconRepeat },
 ];
 const INVEST = [
@@ -116,7 +125,7 @@ const INVEST = [
   { to: "/tax", label: "Tax", icon: IconReceipt },
   { to: "/calendar", label: "Calendar & plan", icon: IconCalendar },
 ];
-const MORE = [{ to: "/plans", label: "Plans & debt", icon: IconRepeat }, ...INVEST.slice(1), { to: "/help", label: "Help & tour", icon: IconHelp }, { to: "/settings", label: "Settings", icon: IconSettings }];
+const MORE = [{ to: "/accounts", label: "Accounts", icon: IconLandmark }, { to: "/goals", label: "Goals", icon: IconTarget }, { to: "/plans", label: "Plans & debt", icon: IconRepeat }, ...INVEST.slice(1), { to: "/help", label: "Help & tour", icon: IconHelp }, { to: "/settings", label: "Settings", icon: IconSettings }];
 
 function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof IconHome }) {
   return (
@@ -129,7 +138,7 @@ function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: 
     >
       {({ isActive }) => (
         <>
-          {isActive && <span className="absolute inset-0 rounded-2xl bg-accent-soft" />}
+          {isActive && <motion.span layoutId="side-pill" transition={{ type: "spring", stiffness: 500, damping: 40 }} className="absolute inset-0 rounded-2xl bg-accent-soft shadow-[inset_0_1px_0_rgb(255_255_255/0.4)]" />}
           <Icon size={19} className="relative" strokeWidth={isActive ? 2.4 : 2} />
           <span className="relative">{label}</span>
         </>
@@ -140,7 +149,7 @@ function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: 
 
 function Shell({ children }: { children: ReactNode }) {
   const { settings, instruments, ready } = useData();
-  const { openChooser } = useAdd();
+  const { openChooser, openPalette } = useAdd();
   useSavingsTracker();
   const [theme, setTheme] = useTheme();
   const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +192,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh md:pl-64">
       {/* Desktop side nav */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line/70 bg-surface/60 px-4 py-6 backdrop-blur-xl md:flex">
+      <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-64 flex-col !rounded-none !border-y-0 !border-l-0 px-4 py-6 md:flex">
         <div className="mb-8 px-2">
           <Logo />
         </div>
@@ -206,12 +215,18 @@ function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Top bar */}
-      <header className="sticky top-0 z-20 bg-paper/70 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <header className="sticky top-0 z-20 bg-paper/45 pt-[env(safe-area-inset-top)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:px-6">
           <div className="md:hidden">
             <Logo />
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={openPalette} aria-label="Search and commands" title="Search (Ctrl K or /)">
+              <IconSearch size={17} />
+              <span className="hidden items-center gap-1 lg:inline-flex">
+                Search <kbd className="rounded-md border border-line px-1.5 py-0.5 text-[10px] font-semibold text-faint">Ctrl K</kbd>
+              </span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={doRefresh} disabled={refreshing} aria-label="Refresh prices" title="Refresh prices">
               <IconRefresh size={17} className={refreshing ? "animate-spin" : ""} />
               <span className="hidden sm:inline">{refreshing ? "Refreshing…" : "Prices"}</span>
@@ -232,7 +247,7 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
         {report && (
-          <div className="flex items-start justify-center gap-3 border-y border-line bg-surface px-4 py-2 text-xs text-muted" role="status">
+          <div className="flex items-start justify-center gap-3 border-y border-line/60 bg-surface/60 px-4 py-2 text-xs text-muted backdrop-blur-xl" role="status">
             <span>
               {report.message}
               {report.missing.length > 0 && (
@@ -276,12 +291,12 @@ function Shell({ children }: { children: ReactNode }) {
       </main>
 
       {/* Mobile: floating tab bar with a raised add button */}
-      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-[1.75rem] border border-line/70 bg-surface/90 px-1 py-1.5 shadow-card backdrop-blur-xl md:hidden">
+      <nav className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-[1.75rem] px-1 py-1.5 md:hidden">
         <TabLink to="/" label="Home" icon={IconHome} />
         <TabLink to="/money" label="Money" icon={IconWallet} />
         <div className="flex justify-center">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={openChooser} className="-mt-7 grid h-14 w-14 place-items-center rounded-2xl bg-hero shadow-[0_10px_24px_-8px_var(--accent)]" aria-label="Add">
-            <IconPlus size={26} strokeWidth={2.6} className="text-white" />
+          <motion.button whileTap={{ scale: 0.9 }} onClick={openChooser} className="-mt-7 grid h-14 w-14 place-items-center rounded-[1.1rem] bg-gradient-to-br from-[#f8e29c] via-[#e3b94d] to-[#b98a35] shadow-[inset_0_1px_0_rgb(255_255_255/0.6),0_12px_24px_-8px_rgb(185_138_53/0.7)]" aria-label="Add">
+            <IconPlus size={26} strokeWidth={2.8} className="text-[#2a1d05]" />
           </motion.button>
         </div>
         <TabLink to="/holdings" label="Invest" icon={IconLayers} />
@@ -294,7 +309,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Sheet open={more} onClose={() => setMore(false)} title="More">
         <div className="grid grid-cols-2 gap-2 pb-2">
           {MORE.map((m) => (
-            <button key={m.to} onClick={() => navigate(m.to)} className="flex items-center gap-3 rounded-2xl border border-line px-3 py-3 text-left text-sm font-semibold hover:border-accent/40 hover:bg-accent-soft/40">
+            <button key={m.to} onClick={() => navigate(m.to)} className="glass flex items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent">
                 <m.icon size={18} />
               </span>
@@ -309,11 +324,12 @@ function Shell({ children }: { children: ReactNode }) {
 
 function TabLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof IconHome }) {
   return (
-    <NavLink to={to} end={to === "/"} className={({ isActive }) => cx("flex flex-col items-center gap-0.5 py-1 text-[10px] font-semibold", isActive ? "text-accent" : "text-faint")}>
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => cx("relative flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold", isActive ? "text-accent" : "text-faint")}>
       {({ isActive }) => (
         <>
-          <Icon size={21} strokeWidth={isActive ? 2.5 : 2} />
-          {label}
+          {isActive && <motion.span layoutId="tab-pill" transition={{ type: "spring", stiffness: 500, damping: 40 }} className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-accent-soft" />}
+          <Icon size={21} strokeWidth={isActive ? 2.5 : 2} className="relative" />
+          <span className="relative">{label}</span>
         </>
       )}
     </NavLink>
@@ -323,12 +339,14 @@ function TabLink({ to, label, icon: Icon }: { to: string; label: string; icon: t
 function AddChooser({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { openAdd, openMoney, openPayday } = useAdd();
   const { settings, cash, asOf } = useData();
+  const navigate = useNavigate();
   const pd = paydayStatus(settings.salary, cash, asOf);
   const tiles = [
-    { label: "Spent", sub: "Log an expense", icon: IconReceiptPlain, onClick: () => openMoney("expense"), tone: "from-[#ff6b8b] to-[#ff9f6b]" },
-    { label: "Got money", sub: "Income, refund", icon: IconBanknote, onClick: () => openMoney("income"), tone: "from-[#10b981] to-[#84cc16]" },
-    { label: "Investment", sub: "Buy, sell, SIP, FD…", icon: IconTrendUp, onClick: () => openAdd(), tone: "from-[#6a46ff] to-[#d946ef]" },
-    ...(pd.state === "due" || pd.state === "upcoming" ? [{ label: "Salary in", sub: "Run payday", icon: IconBriefcase, onClick: () => openPayday(), tone: "from-[#0ea5e9] to-[#6366f1]" }] : []),
+    { label: "Spent", sub: "Log an expense", icon: IconReceiptPlain, onClick: () => openMoney("expense"), tone: "from-[#c4495f] to-[#e48a5a]" },
+    { label: "Got money", sub: "Income, refund", icon: IconBanknote, onClick: () => openMoney("income"), tone: "from-[#0f8a63] to-[#3fb58a]" },
+    { label: "Investment", sub: "Buy, sell, SIP, FD…", icon: IconTrendUp, onClick: () => openAdd(), tone: "from-[#1f4a8c] to-[#c79a3b]" },
+    { label: "New goal", sub: "Save for something", icon: IconTarget, onClick: () => navigate("/goals?new=1"), tone: "from-[#17707c] to-[#5aa9a0]" },
+    ...(pd.state === "due" || pd.state === "upcoming" ? [{ label: "Salary in", sub: "Run payday", icon: IconBriefcase, onClick: () => openPayday(), tone: "from-[#17707c] to-[#2f62a8]" }] : []),
   ];
   return (
     <Sheet open={open} onClose={onClose} title="Add something">
@@ -396,8 +414,12 @@ export function App() {
   const [payday, setPayday] = useState(false);
   const [chooser, setChooser] = useState(false);
   const [tour, setTour] = useState(false);
+  const [palette, setPalette] = useState(false);
+  const togglePalette = useCallback(() => setPalette((p) => !p), []);
+  usePaletteShortcut(togglePalette);
   const ctx: AddCtx = {
     openTour: useCallback(() => setTour(true), []),
+    openPalette: togglePalette,
     openAdd: useCallback((opts?: { instrumentId?: string; txnId?: string }) => setAdd({ open: true, ...opts }), []),
     openMoney: useCallback((k: EntryKind) => setMoney(k), []),
     openPayday: useCallback(() => setPayday(true), []),
@@ -412,6 +434,8 @@ export function App() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/money" element={<MoneyPage />} />
+              <Route path="/accounts" element={<AccountsPage />} />
+              <Route path="/goals" element={<GoalsPage />} />
               <Route path="/plans" element={<PlansPage />} />
               <Route path="/holdings" element={<HoldingsPage />} />
               <Route path="/holdings/:id" element={<HoldingDetailPage />} />
@@ -434,6 +458,7 @@ export function App() {
           <Onboarding />
           <TourAutoStart onOpen={() => setTour(true)} />
           <Tour open={tour} onClose={() => setTour(false)} />
+          <CommandPalette open={palette} onClose={() => setPalette(false)} />
           </Gate>
         </HashRouter>
       </AddContext.Provider>

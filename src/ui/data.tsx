@@ -2,6 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { db, mergeSettings, type PaydayRecord } from "../db/db";
 import type { CashEntry } from "../domain/cashflow";
+import type { Goal, GoalFund } from "../domain/goals";
 import { todayISO } from "../domain/dates";
 import { buildPortfolio, type Portfolio } from "../domain/portfolio";
 import type { Instrument, Liability, LookThrough, MonthlyPlan, PricePoint, Settings, Transaction } from "../domain/types";
@@ -16,6 +17,8 @@ export interface AppData {
   liabilities: Liability[];
   cash: CashEntry[];
   paydays: PaydayRecord[];
+  goals: Goal[];
+  goalFunds: GoalFund[];
   settings: Settings;
   asOf: string;
   portfolio: Portfolio;
@@ -26,7 +29,7 @@ const Ctx = createContext<AppData | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const raw = useLiveQuery(async () => {
-    const [instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, settings] = await Promise.all([
+    const [instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, goals, goalFunds, settings] = await Promise.all([
       db.instruments.toArray(),
       db.txns.toArray(),
       db.prices.toArray(),
@@ -35,9 +38,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       db.liabilities.toArray(),
       db.cash.toArray(),
       db.paydays.toArray(),
+      db.goals.toArray(),
+      db.goalFunds.toArray(),
       db.settings.get("settings"),
     ]);
-    return { instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, settings: mergeSettings(settings) };
+    return { instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, goals, goalFunds, settings: mergeSettings(settings) };
   }, []);
 
   const asOf = todayISO();
@@ -51,6 +56,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       liabilities: [],
       cash: [],
       paydays: [],
+      goals: [],
+      goalFunds: [],
       settings: mergeSettings(undefined),
     };
     const instruments = [...d.instruments].sort((a, b) => a.name.localeCompare(b.name));

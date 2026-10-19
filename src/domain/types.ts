@@ -149,6 +149,12 @@ export interface Transaction {
   notes?: string;
   source: "manual" | "csv" | "sample" | "restore";
   importBatchId?: string;
+  /** On a bank-account transaction: the investment transaction whose money moved through this account. */
+  fundsTxnId?: string;
+  /** Shared by the two legs of a transfer between accounts. */
+  transferId?: string;
+  /** The balance an account was opened with. */
+  opening?: boolean;
   createdAt: string;
 }
 
@@ -259,6 +265,8 @@ export interface Settings {
   displayName?: string;
   /** Set once the welcome flow has been completed or skipped. */
   onboarded?: boolean;
+  /** The bank account used for the last entry, preselected next time. */
+  lastAccountId?: string;
   /** Set once the product tour has been seen or skipped. */
   toured?: boolean;
   /** Monthly savings target. Unset = your SIP/RD/chit plans, else 20% of salary. */

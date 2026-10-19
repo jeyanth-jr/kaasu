@@ -33,7 +33,8 @@ export function HelpPage() {
           <ol className="flex flex-col gap-3">
             {[
               ["Payday and budgets", "Money → set your salary day, then your category budgets.", "/money"],
-              ["Your bank or savings account", "Add → Investment → Create manually → Cash. This lets entries update its balance and counts it toward your emergency fund.", null],
+              ["Your bank accounts", "Accounts → Add account for each one, with today's balance. Every spend, income and investment then asks which account, and keeps its balance true.", "/accounts"],
+              ["Your goals", "Goals → set a target and date for a trip, a phone, a home. Kaasu shows the monthly amount to put aside.", "/goals"],
               ["Your investments", "Import a spreadsheet (below) or add each one with the + button.", "/settings#import"],
               ["Link prices", "Holdings → \"Link price sources\" for anything without a symbol or fund code.", "/holdings"],
               ["Monthly plans", "Plans → SIPs, RDs, gold chits and EMIs, with durations.", "/plans"],

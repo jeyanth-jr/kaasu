@@ -49,6 +49,8 @@ export function HoldingDetailPage() {
     if (!inst) return;
     if (!confirm(`Delete ${inst.name} and its ${myTxns.length} transactions? This can't be undone (unless you restore a backup).`)) return;
     await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough], async () => {
+      const own = await db.txns.where("instrumentId").equals(inst.id).primaryKeys();
+      for (const id of own) await db.txns.where("fundsTxnId").equals(id).delete();
       await db.txns.where("instrumentId").equals(inst.id).delete();
       await db.prices.where("instrumentId").equals(inst.id).delete();
       await db.lookThrough.where("instrumentId").equals(inst.id).delete();

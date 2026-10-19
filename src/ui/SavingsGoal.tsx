@@ -67,7 +67,7 @@ function Ring({ pct, onTap }: { pct: number; onTap: () => void }) {
             cy="60"
             r={R - 13}
             fill="none"
-            stroke="var(--lime)"
+            stroke="var(--gold)"
             strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={2 * Math.PI * (R - 13)}
@@ -79,7 +79,7 @@ function Ring({ pct, onTap }: { pct: number; onTap: () => void }) {
         {[25, 50, 75].map((step) => {
           const a = (step / 100) * 2 * Math.PI;
           const reached = pct >= step;
-          return <circle key={step} cx={60 + R * Math.cos(a)} cy={60 + R * Math.sin(a)} r={reached ? 3.6 : 2.6} fill={reached ? "var(--lime)" : "var(--faint)"} stroke="var(--surface)" strokeWidth="1.5" />;
+          return <circle key={step} cx={60 + R * Math.cos(a)} cy={60 + R * Math.sin(a)} r={reached ? 3.6 : 2.6} fill={reached ? "var(--gold)" : "var(--faint)"} stroke="var(--surface)" strokeWidth="1.5" />;
         })}
       </svg>
       <div className="absolute inset-0 grid place-items-center">
@@ -111,7 +111,7 @@ export function SavingsGoalCard() {
 
   return (
     <>
-      <Card title="Savings goal" icon={<IconTrophy size={15} />} action={<Badge tone={pct >= 100 ? "lime" : "neutral"}>{pct >= 100 ? "Reached" : "This month"}</Badge>}>
+      <Card title="Savings goal" icon={<IconTrophy size={15} />} action={<Badge tone={pct >= 100 ? "gold" : "neutral"}>{pct >= 100 ? "Reached" : "This month"}</Badge>}>
         <div className="flex flex-wrap items-center gap-5">
           <Ring pct={pct} onTap={tapRing} />
           <div className="min-w-0 flex-1 basis-48">
@@ -128,7 +128,7 @@ export function SavingsGoalCard() {
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {v.streak >= 1 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-lime px-3 py-1 text-xs font-bold text-lime-ink">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-ink">
                   <IconFlame size={13} /> {v.streak}-month streak
                 </span>
               )}
@@ -149,7 +149,7 @@ export function SavingsGoalCard() {
             const hit = pct >= s;
             return (
               <div key={s} className="flex flex-1 flex-col items-center gap-1">
-                <span className={cx("grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold transition-colors", hit ? "bg-lime text-lime-ink" : "bg-sunken text-faint")}>
+                <span className={cx("grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold transition-colors", hit ? "bg-gold text-gold-ink" : "bg-sunken text-faint")}>
                   {hit ? <IconCheck size={13} strokeWidth={3} /> : ""}
                 </span>
                 <span className={cx("text-[11px] font-semibold num", hit ? "text-ink" : "text-faint")}>{s}%</span>
@@ -234,7 +234,7 @@ function WinsSheet({ onClose }: { onClose: () => void }) {
             return (
               <li key={w.key}>
                 <button onClick={() => celebrate(w.d!)} className="flex w-full items-center gap-3 rounded-2xl border border-line p-3 text-left transition hover:border-accent/40 hover:bg-accent-soft/30" title="Celebrate again">
-                  <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-2xl", w.d!.tier === "big" ? "bg-lime text-lime-ink" : "bg-accent-soft text-accent")}>
+                  <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-2xl", w.d!.tier === "big" ? "bg-gold text-gold-ink" : "bg-accent-soft text-accent")}>
                     <Icon size={20} />
                   </span>
                   <span className="min-w-0 flex-1">

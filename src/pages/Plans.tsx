@@ -74,7 +74,7 @@ export function PlansPage() {
       ) : (
         <div className="flex flex-col gap-4">
           <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[2rem] bg-hero p-5 shadow-card sm:p-7">
-            <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-lime/30 blur-3xl" />
+            <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-gold/30 blur-3xl" />
             <div className="relative">
               <div className="text-sm font-semibold text-white/80">Committed every month</div>
               <AnimatedMoney p={totals.monthlyTotal} className="display mt-1 block text-5xl leading-none font-extrabold" />
@@ -90,7 +90,7 @@ export function PlansPage() {
                 </span>
               </div>
               {next && (
-                <div className="mt-4 flex items-start gap-2 rounded-2xl bg-lime px-3.5 py-2 text-sm font-bold text-lime-ink">
+                <div className="mt-4 flex items-start gap-2 rounded-2xl bg-gold px-3.5 py-2 text-sm font-bold text-gold-ink">
                   <IconFlag size={16} className="mt-0.5 shrink-0" />
                   <span>
                     <span className="money">{formatINR(next.freed)}</span> a month frees up after {formatDate(next.date)}
@@ -235,7 +235,7 @@ function ScheduleCard({ item, onEditLoan }: { item: ScheduleItem; onEditLoan: (i
   const left = item.remainingCount;
 
   const stateBadge =
-    item.state === "ending-soon" ? <Badge tone="lime">Ending soon</Badge> : item.state === "upcoming" ? <Badge tone="accent">Starts {formatDate(item.start)}</Badge> : item.state === "done" ? <Badge>Finished</Badge> : item.state === "open-ended" ? <Badge>Open-ended</Badge> : null;
+    item.state === "ending-soon" ? <Badge tone="gold">Ending soon</Badge> : item.state === "upcoming" ? <Badge tone="accent">Starts {formatDate(item.start)}</Badge> : item.state === "done" ? <Badge>Finished</Badge> : item.state === "open-ended" ? <Badge>Open-ended</Badge> : null;
 
   return (
     <Card className="p-0">
@@ -262,7 +262,7 @@ function ScheduleCard({ item, onEditLoan }: { item: ScheduleItem; onEditLoan: (i
       <div className="mt-4">
         {item.progress !== null ? (
           <>
-            <Meter value={item.dueCount} max={item.totalCount ?? 1} size="sm" label={`${item.name} instalments paid`} tone={item.state === "ending-soon" ? "lime" : "accent"} />
+            <Meter value={item.dueCount} max={item.totalCount ?? 1} size="sm" label={`${item.name} instalments paid`} tone={item.state === "ending-soon" ? "gold" : "accent"} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted">
               <span>
                 <b className="text-ink num">

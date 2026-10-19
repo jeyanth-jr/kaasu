@@ -13,6 +13,7 @@ import type {
 } from "../domain/types";
 import { defaultsForKind } from "../domain/types";
 import type { CashEntry } from "../domain/cashflow";
+import type { Goal, GoalFund } from "../domain/goals";
 import { db, nowISO, saveSettings } from "./db";
 
 /**
@@ -227,6 +228,8 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
   t(sb, "deposit", addMonths(asOf, -30), { amount: toPaise(120000) });
   t(sb, "interest", addMonths(asOf, -6), { amount: toPaise(1800) });
   t(sb, "withdrawal", addMonths(asOf, -2), { amount: toPaise(15000) });
+  const axis = add("axis", "Axis Spends Account", { kind: "cash", bank: "Axis Bank", account: "savings", ratePct: 3 });
+  t(axis, "deposit", addMonths(asOf, -4), { amount: toPaise(40000), opening: true });
   const sweep = add("sweep", "ICICI Sweep-in FD", { kind: "cash", bank: "ICICI Bank", account: "sweep", ratePct: 6.5 });
   t(sweep, "deposit", addMonths(asOf, -14), { amount: toPaise(100000) });
 
@@ -321,7 +324,40 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     }
   }
 
-  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash], async () => {
+  // Every entry belongs to an account: salary lands in HDFC; everyday spends come out of Axis; the rest from HDFC.
+  const axisSpend = new Set(["food", "transport", "shopping", "fun", "subscriptions", "travel"]);
+  for (const e of cash) {
+    e.accountId = e.kind === "income" || !axisSpend.has(e.category) ? sb : axis;
+    e.linkedTxnId = `sample-ct-${e.id}`;
+    txns.push({ id: e.linkedTxnId, instrumentId: e.accountId, date: e.date, type: e.kind === "income" ? "deposit" : "withdrawal", amount: e.amount, notes: e.note, source: "sample", createdAt: e.createdAt });
+  }
+  // A monthly top-up from HDFC to Axis shows transfers.
+  for (let mBack = 3; mBack >= 0; mBack--) {
+    const date = withDay(addMonths(asOf, -mBack), 3);
+    if (date > asOf) continue;
+    const x = `sample-x${mBack}`;
+    txns.push(
+      { id: `${x}a`, instrumentId: sb, date, type: "withdrawal", amount: toPaise(15000), notes: "Monthly top-up", transferId: x, source: "sample", createdAt: created },
+      { id: `${x}b`, instrumentId: axis, date, type: "deposit", amount: toPaise(15000), notes: "Monthly top-up", transferId: x, source: "sample", createdAt: created },
+    );
+  }
+
+  const goals: Goal[] = ([
+    { id: id("g-trip"), name: "Goa trip", icon: "plane", term: "short", target: toPaise(60000), targetDate: addMonths(asOf, 5), startDate: addMonths(asOf, -3), createdAt: created },
+    { id: id("g-phone"), name: "New phone", icon: "laptop", term: "short", target: toPaise(90000), targetDate: addMonths(asOf, 9), startDate: addMonths(asOf, -2), createdAt: created },
+    { id: id("g-home"), name: "Home down payment", icon: "home", term: "long", target: toPaise(1500000), targetDate: addMonths(asOf, 60), startDate: addMonths(asOf, -6), ratePct: 8, createdAt: created },
+  ] as Goal[]).map((g) => ({ ...g, sample: true }));
+  const goalFunds: GoalFund[] = [];
+  let gf = 0;
+  const put = (goalId: string, monthsBack: number, rupees: number, note?: string) =>
+    goalFunds.push({ id: id(`gf${++gf}`), goalId, date: withDay(addMonths(asOf, -monthsBack), 6), amount: toPaise(rupees), note, createdAt: created, sample: true });
+  for (const b of [2, 1, 0]) put(id("g-trip"), b, 9000, "Monthly");
+  for (const b of [1, 0]) put(id("g-phone"), b, 7000);
+  for (const b of [5, 4, 3, 2, 1, 0]) put(id("g-home"), b, 20000);
+
+  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash, db.goals, db.goalFunds], async () => {
+    await db.goals.bulkPut(goals);
+    await db.goalFunds.bulkPut(goalFunds);
     await db.cash.bulkPut(cash);
     await db.instruments.bulkPut(instruments);
     await db.txns.bulkPut(txns);
@@ -342,7 +378,9 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
 }
 
 export async function clearSampleData(): Promise<void> {
-  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash], async () => {
+  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash, db.goals, db.goalFunds], async () => {
+    await db.goals.filter((g) => (g as { sample?: boolean }).sample === true).delete();
+    await db.goalFunds.filter((f) => (f as { sample?: boolean }).sample === true).delete();
     await db.cash.filter((c) => c.source === "sample").delete();
     const ids = (await db.instruments.toArray()).filter((i) => i.sample).map((i) => i.id);
     await db.txns.where("instrumentId").anyOf(ids).delete();

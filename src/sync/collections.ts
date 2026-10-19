@@ -2,7 +2,7 @@ import type { Table } from "dexie";
 import type { KaasuDB } from "../db/db";
 
 /** Tables that sync to the cloud, and how each record is identified there. */
-export const COLLECTIONS = ["instruments", "txns", "prices", "lookThrough", "plans", "liabilities", "settings", "imports", "cash", "paydays"] as const;
+export const COLLECTIONS = ["instruments", "txns", "prices", "lookThrough", "plans", "liabilities", "settings", "imports", "cash", "paydays", "goals", "goalFunds"] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 export function isCollection(s: string): s is Collection {
@@ -36,6 +36,8 @@ export function isSampleRecord(c: Collection, rec: Record<string, unknown> | und
   switch (c) {
     case "instruments":
     case "liabilities":
+    case "goals":
+    case "goalFunds":
       return rec.sample === true;
     case "txns":
     case "cash":

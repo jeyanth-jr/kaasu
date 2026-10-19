@@ -5,6 +5,8 @@ import { db, nowISO, requestPersistence, saveSettings } from "../db/db";
 import { backupFileName, clearAll, createBackup, parseBackup, restoreBackup } from "../db/backup";
 import { decryptText, encryptText, isEncrypted } from "../db/crypto";
 import { clearSampleData, loadSampleData } from "../db/sample";
+import { accountLedger, activeAccounts } from "../domain/accounts";
+import { categoryOf } from "../domain/cashflow";
 import { formatDate } from "../domain/dates";
 import { ASSET_CLASSES, DEFAULT_TAX, type AllocationBand, type Settings, type TaxConfig } from "../domain/types";
 import { proxyOnline, refreshPrices } from "../prices/client";
@@ -345,7 +347,13 @@ function BackupSection({ lastBackupAt, counts }: { lastBackupAt?: string; counts
           <IconDownload size={16} /> {passphrase ? "Download encrypted backup" : "Download backup (.json)"}
         </Button>
         <Button onClick={() => void exportTxnsCsv()}>
-          <IconDownload size={16} /> Transactions as CSV
+          <IconDownload size={16} /> Investments as CSV
+        </Button>
+        <Button onClick={() => void exportMoneyCsv()}>
+          <IconDownload size={16} /> Spending &amp; income as CSV
+        </Button>
+        <Button onClick={() => void exportAccountsCsv()}>
+          <IconDownload size={16} /> Bank statements as CSV
         </Button>
         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-sunken">
           <IconUpload size={16} /> Restore from file
@@ -416,6 +424,35 @@ async function exportTxnsCsv() {
     );
   }
   saveFile(rows.join("\n"), `kaasu-transactions-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
+}
+
+const csvCell = (v: string | number | undefined) => {
+  const s = v === undefined ? "" : String(v);
+  return /[",\n]/.test(s) ?`"${s.replace(/"/g, '""')}"` : s;
+};
+
+/** Every spend and income entry, with the account it went through. */
+async function exportMoneyCsv() {
+  const [cash, instruments] = await Promise.all([db.cash.toArray(), db.instruments.toArray()]);
+  const byId = new Map(instruments.map((i) => [i.id, i]));
+  const rows = [["Date", "Type", "Category", "Amount", "Account", "Note"].join(",")];
+  for (const e of [...cash].sort((a, b) => (a.date < b.date ? -1 : 1))) {
+    rows.push([e.date, e.kind, categoryOf(e.category).label, (e.kind === "income" ? e.amount : -e.amount) / 100, byId.get(e.accountId ?? "")?.name ?? "", e.note].map(csvCell).join(","));
+  }
+  saveFile(rows.join("\n"), `kaasu-money-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
+}
+
+/** Every bank account's statement: each rupee in or out, what it was for, and the running balance. */
+async function exportAccountsCsv() {
+  const [txns, cash, instruments] = await Promise.all([db.txns.toArray(), db.cash.toArray(), db.instruments.toArray()]);
+  const instrumentById = new Map(instruments.map((i) => [i.id, i]));
+  const rows = [["Account", "Date", "What", "Detail", "Money in", "Money out", "Balance"].join(",")];
+  for (const acc of activeAccounts(instruments)) {
+    for (const r of accountLedger(acc.id, { txns, cash, instrumentById }).reverse()) {
+      rows.push([acc.name, r.date, r.label, r.sub, r.delta > 0 ? r.delta / 100 : undefined, r.delta < 0 ? -r.delta / 100 : undefined, r.balance / 100].map(csvCell).join(","));
+    }
+  }
+  saveFile(rows.join("\n"), `kaasu-accounts-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
 }
 
 function SampleSection({ hasSample }: { hasSample: boolean }) {

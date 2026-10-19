@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { db, newId, nowISO } from "../db/db";
+import { deleteTxnCascade, fundingAccountOf, syncFunding } from "../db/accounts";
+import { db, newId, nowISO, saveSettings } from "../db/db";
+import { activeAccounts, fundingDirection } from "../domain/accounts";
 import { searchKnownSymbols, type KnownSymbol } from "../data/symbols";
 import { addMonths, isValidISO, todayISO, withDay } from "../domain/dates";
 import { matchFifo, openQty } from "../domain/lots";
@@ -70,6 +72,8 @@ interface TxnDraft {
   tds: number | null;
   notes: string;
   backfill: boolean;
+  /** Bank account the money came from or went to ("" = not tracked). */
+  fundingId: string;
 }
 
 function defaultDraft(inst: Instrument | null, existing?: Transaction): TxnDraft {
@@ -85,6 +89,7 @@ function defaultDraft(inst: Instrument | null, existing?: Transaction): TxnDraft
       tds: existing.tds ?? null,
       notes: existing.notes ?? "",
       backfill: false,
+      fundingId: "",
     };
   }
   const kind = inst?.kind ?? "stock";
@@ -106,6 +111,7 @@ function defaultDraft(inst: Instrument | null, existing?: Transaction): TxnDraft
     tds: null,
     notes: "",
     backfill: !inst?.id && (d?.kind === "rd" || d?.kind === "commitment"),
+    fundingId: "",
   };
 }
 
@@ -137,7 +143,7 @@ export function classifyScheme(hit: { name: string; category?: string }): Partia
 }
 
 export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { open: boolean; instrumentId?: string; txnId?: string; onClose: () => void }) {
-  const { instruments, instrumentById, txns } = useData();
+  const { instruments, instrumentById, txns, settings } = useData();
   const [step, setStep] = useState<Step>("pick");
   const [inst, setInst] = useState<Instrument | null>(null);
   const [draft, setDraft] = useState<TxnDraft>(defaultDraft(null));
@@ -153,7 +159,10 @@ export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { op
     const existing = editing ? instrumentById.get(editing.instrumentId) : instrumentId ? instrumentById.get(instrumentId) : undefined;
     if (existing) {
       setInst(existing);
-      setDraft(defaultDraft(existing, editing));
+      const mirror = fundingAccountOf(editing?.id, txns);
+      const accounts = activeAccounts(instruments);
+      const last = accounts.some((a) => a.id === settings.lastAccountId) ? settings.lastAccountId! : "";
+      setDraft({ ...defaultDraft(existing, editing), fundingId: editing ? (mirror?.instrumentId ?? "") : existing.kind === "cash" ? "" : last });
       setStep("txn");
     } else {
       setInst(null);
@@ -163,7 +172,8 @@ export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { op
 
   const choose = (i: Instrument) => {
     setInst(i);
-    setDraft(defaultDraft(i));
+    const last = activeAccounts(instruments).some((a) => a.id === settings.lastAccountId) ? settings.lastAccountId! : "";
+    setDraft({ ...defaultDraft(i), fundingId: i.kind === "cash" ? "" : last });
     setStep(i.id ? "txn" : "instrument");
   };
 
@@ -210,6 +220,9 @@ export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { op
         rows.push({ ...base, id: editing?.id ?? newId("t_"), date: draft.date, createdAt: editing?.createdAt ?? created, source: editing?.source === "csv" ? "csv" : "manual", importBatchId: editing?.importBatchId });
       }
       await db.txns.bulkPut(rows);
+      const funding = instrument.kind === "cash" ? undefined : draft.fundingId || undefined;
+      for (const r of rows) await syncFunding(r, funding);
+      if (funding) await saveSettings({ lastAccountId: funding });
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -221,7 +234,7 @@ export function AddTransactionSheet({ open, instrumentId, txnId, onClose }: { op
   async function remove() {
     if (!editing) return;
     if (!confirm("Delete this transaction?")) return;
-    await db.txns.delete(editing.id);
+    await deleteTxnCascade(editing.id);
     onClose();
   }
 
@@ -452,6 +465,8 @@ function TxnForm({ inst, draft, setDraft, heldQty, isNew }: { inst: Instrument; 
     if (!next.amountTouched && PRICED_TYPES.includes(next.type) && next.qty && next.price) next.amount = Math.round(next.qty * next.price * 100);
     setDraft(next);
   };
+  const { instruments } = useData();
+  const accounts = activeAccounts(instruments);
   const types = typesFor(inst.kind);
   const qtyLabel = inst.kind === "gold" && inst.details.kind === "gold" && inst.details.form === "physical" ? "Grams" : inst.kind === "mf" ? "Units" : inst.kind === "bond" ? "Units (bonds)" : "Quantity";
   const showQty = QTY_TYPES.includes(draft.type);
@@ -533,6 +548,20 @@ function TxnForm({ inst, draft, setDraft, heldQty, isNew }: { inst: Instrument; 
       {(draft.type === "interest" || draft.type === "coupon" || draft.type === "dividend" || draft.type === "maturity") && (
         <Field label="TDS deducted" hint="Amount above is before TDS">
           {(id) => <MoneyInput id={id} value={draft.tds} onChange={(p) => set({ tds: p })} />}
+        </Field>
+      )}
+      {accounts.length > 0 && inst.kind !== "cash" && fundingDirection(draft.type) && (
+        <Field label={fundingDirection(draft.type) === "out" ? "Paid from" : "Credited to"} hint={draft.fundingId ? "That account's balance is updated" : "Pick the bank account to keep its balance right"} className="sm:col-span-2">
+          {(id) => (
+            <Select id={id} value={draft.fundingId} onChange={(e) => set({ fundingId: e.target.value })}>
+              <option value="">Not tracked</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
       )}
       <Field label="Note" className="sm:col-span-2">

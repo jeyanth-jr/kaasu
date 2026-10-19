@@ -13,7 +13,7 @@ import { IconFlame, IconParty, IconShield, IconSparkles, IconTarget, IconTrendUp
 type Listener = (w: Win) => void;
 const listeners = new Set<Listener>();
 
-const COLORS = ["#6a46ff", "#d946ef", "#c4f135", "#10b981", "#f5b301", "#38bdf8"];
+const COLORS = ["#e3b94d", "#f6dc8a", "#2f62a8", "#17909c", "#3ddba0", "#ffffff"];
 const reduced = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function haptic(tier: WinTier): void {
@@ -89,19 +89,19 @@ export function CelebrationHost() {
               onClick={() => setItems((cur) => cur.filter((x) => x.id !== w.id))}
               className={cx(
                 "pointer-events-auto flex w-full max-w-sm cursor-pointer items-center gap-3 rounded-3xl border p-3.5 pr-4 shadow-2xl backdrop-blur-xl",
-                big ? "border-lime/60 bg-hero text-white" : "border-line bg-surface/95 text-ink",
+                big ? "border-gold/60 bg-hero text-white" : "border-line bg-surface/95 text-ink",
               )}
             >
               <motion.span
                 initial={{ scale: 0, rotate: -40 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.08 }}
-                className={cx("grid h-12 w-12 shrink-0 place-items-center rounded-2xl", big ? "bg-lime text-lime-ink" : "bg-accent-soft text-accent")}
+                className={cx("grid h-12 w-12 shrink-0 place-items-center rounded-2xl", big ? "bg-gold text-gold-ink" : "bg-accent-soft text-accent")}
               >
                 <Icon size={24} />
               </motion.span>
               <div className="min-w-0 flex-1">
-                <div className={cx("text-[11px] font-bold tracking-wider uppercase", big ? "text-lime" : "text-accent")}>{big ? "Big win" : w.tier === "medium" ? "Nice one" : "Milestone"}</div>
+                <div className={cx("text-[11px] font-bold tracking-wider uppercase", big ? "text-gold" : "text-accent")}>{big ? "Big win" : w.tier === "medium" ? "Nice one" : "Milestone"}</div>
                 <div className="display truncate text-lg leading-tight font-extrabold">{w.title}</div>
                 <div className={cx("text-xs", big ? "text-white/80" : "text-muted")}>{w.detail}</div>
               </div>
@@ -121,7 +121,7 @@ export function SparkleBurst() {
       {Array.from({ length: 6 }, (_, i) => (
         <motion.span
           key={i}
-          className="absolute text-lime"
+          className="absolute text-gold"
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.4], x: Math.cos((i / 6) * Math.PI * 2) * 74, y: Math.sin((i / 6) * Math.PI * 2) * 74 }}
           transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.4, delay: i * 0.12 }}

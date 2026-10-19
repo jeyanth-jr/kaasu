@@ -5,66 +5,81 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Kaasu palette: electric violet + lime pop on lavender (light) or ink (dark).
- * Gains and losses always carry a sign or arrow, so colour is never the only signal.
+ * Kaasu palette: midnight navy and champagne gold on warm porcelain (light) or deep ink (dark).
+ * Surfaces are "liquid glass": translucent, blurred, with a specular edge and a highlight that
+ * follows the pointer. Gains and losses always carry a sign or arrow, so colour is never the only signal.
  */
 :root {
-  --paper: #f6f4ff;
+  --paper: #f2efe8;
   --surface: #ffffff;
-  --sunken: #efebfd;
-  --ink: #15122b;
-  --muted: #5d5878;
-  --faint: #8f8aad;
-  --line: #e3ddf6;
-  --accent: #6a46ff;
-  --accent-2: #d946ef;
+  --sunken: #e9e5dc;
+  --ink: #0f1726;
+  --muted: #536076;
+  --faint: #86909f;
+  --line: #d9d4c8;
+  --accent: #18305a;
+  --accent-2: #b98a35;
   --accent-ink: #ffffff;
-  --accent-soft: #ebe5ff;
-  --lime: #c4f135;
-  --lime-ink: #1b2400;
-  --gain: #0b8f62;
-  --gain-soft: #dcf7ec;
-  --loss: #e11d48;
-  --loss-soft: #ffe4ea;
-  --warn: #b45309;
-  --warn-soft: #fff1d6;
-  --brass: #e7a400;
-  --c-equity: #6a46ff;
-  --c-debt: #0ea5e9;
-  --c-gold: #f5b301;
-  --c-cash: #10b981;
-  --c-other: #ec4899;
-  --shadow: 0 1px 2px rgb(21 18 43 / 0.04), 0 8px 24px -12px rgb(76 50 200 / 0.18);
+  --accent-soft: #e3e8f1;
+  --gold: #e3b94d;
+  --gold-ink: #261c04;
+  --gain: #0d8a5e;
+  --gain-soft: #d9f3e8;
+  --loss: #d2304c;
+  --loss-soft: #fde3e8;
+  --warn: #a8570a;
+  --warn-soft: #fcefd3;
+  --brass: #c99a2e;
+  --c-equity: #2f62a8;
+  --c-debt: #17909c;
+  --c-gold: #d1a021;
+  --c-cash: #2f9e72;
+  --c-other: #b0587f;
+  --glass-bg: 255 255 255;
+  --glass-edge: rgb(255 255 255 / 0.75);
+  --glass-hi: rgb(255 255 255 / 0.95);
+  --glass-lo: rgb(15 23 38 / 0.06);
+  --glow-1: rgb(31 79 150 / 0.2);
+  --glow-2: rgb(227 185 77 / 0.28);
+  --glow-3: rgb(23 144 156 / 0.16);
+  --shadow: 0 1px 1px rgb(15 23 38 / 0.04), 0 10px 30px -14px rgb(15 36 80 / 0.28);
   color-scheme: light;
 }
 
 .dark {
-  --paper: #0c0a18;
-  --surface: #15122a;
-  --sunken: #0f0c1f;
-  --ink: #f3f1ff;
-  --muted: #a8a3c6;
-  --faint: #6f6a92;
-  --line: #2a2549;
-  --accent: #8d74ff;
-  --accent-2: #e879f9;
-  --accent-ink: #0c0a18;
-  --accent-soft: #241d4f;
-  --lime: #d4ff4f;
-  --lime-ink: #182000;
-  --gain: #34d399;
-  --gain-soft: #0e2f25;
-  --loss: #fb7185;
+  --paper: #06080e;
+  --surface: #121826;
+  --sunken: #0a0e17;
+  --ink: #eef1f7;
+  --muted: #98a3b6;
+  --faint: #637086;
+  --line: #222b3d;
+  --accent: #e6c47c;
+  --accent-2: #7ea6e6;
+  --accent-ink: #1a1304;
+  --accent-soft: #2a2415;
+  --gold: #efca6a;
+  --gold-ink: #1e1503;
+  --gain: #3ddba0;
+  --gain-soft: #0d2c22;
+  --loss: #ff7a8e;
   --loss-soft: #3a1420;
-  --warn: #fbbf24;
+  --warn: #f5b84a;
   --warn-soft: #33270c;
-  --brass: #fbbf24;
-  --c-equity: #8d74ff;
-  --c-debt: #38bdf8;
-  --c-gold: #fbbf24;
-  --c-cash: #34d399;
-  --c-other: #f472b6;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --brass: #efca6a;
+  --c-equity: #6c9bea;
+  --c-debt: #3cc3cf;
+  --c-gold: #efca6a;
+  --c-cash: #3ddba0;
+  --c-other: #e083ad;
+  --glass-bg: 26 34 52;
+  --glass-edge: rgb(255 255 255 / 0.09);
+  --glass-hi: rgb(255 255 255 / 0.14);
+  --glass-lo: rgb(0 0 0 / 0.35);
+  --glow-1: rgb(52 104 196 / 0.26);
+  --glow-2: rgb(227 185 77 / 0.14);
+  --glow-3: rgb(23 170 182 / 0.16);
+  --shadow: 0 1px 1px rgb(0 0 0 / 0.4), 0 14px 36px -16px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }
 
@@ -80,8 +95,8 @@
   --color-accent-2: var(--accent-2);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
-  --color-lime: var(--lime);
-  --color-lime-ink: var(--lime-ink);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
   --color-gain: var(--gain);
   --color-gain-soft: var(--gain-soft);
   --color-loss: var(--loss);
@@ -94,9 +109,12 @@
   --shadow-card: var(--shadow);
 }
 
+html {
+  background: var(--paper);
+}
+
 html,
 body {
-  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -105,10 +123,30 @@ body {
 
 body {
   min-height: 100dvh;
-  background-image:
-    radial-gradient(60rem 30rem at 110% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
-    radial-gradient(40rem 24rem at -10% 0%, color-mix(in oklab, var(--accent-2) 8%, transparent), transparent 60%);
-  background-attachment: fixed;
+  position: relative;
+}
+
+/* Ambient colour behind the glass: slow-drifting light that gives the blur something to refract. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -15%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 28rem at 88% 4%, var(--glow-1), transparent 62%),
+    radial-gradient(34rem 26rem at 6% 18%, var(--glow-2), transparent 62%),
+    radial-gradient(40rem 30rem at 60% 100%, var(--glow-3), transparent 62%);
+  animation: drift 38s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-3%, 2.5%, 0) scale(1.06);
+  }
 }
 
 .num {
@@ -121,19 +159,70 @@ body {
   letter-spacing: -0.025em;
 }
 
-/* Signature gradient for hero surfaces */
+@layer components {
+/* ------------------------------------------------------------------ liquid glass */
+
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(145deg, rgb(var(--glass-bg) / 0.78), rgb(var(--glass-bg) / 0.5));
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  backdrop-filter: blur(22px) saturate(165%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 -1px 0 var(--glass-lo),
+    var(--shadow);
+}
+
+/* A denser variant for sheets and menus where text must stay readable over anything. */
+.glass-strong {
+  background: linear-gradient(145deg, rgb(var(--glass-bg) / 0.94), rgb(var(--glass-bg) / 0.84));
+  -webkit-backdrop-filter: blur(34px) saturate(180%);
+  backdrop-filter: blur(34px) saturate(180%);
+}
+
+/* Specular sheen that tracks the pointer (set by the listener in main.tsx). */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.5), transparent 62%);
+}
+.dark .glass::after {
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.1), transparent 62%);
+}
+@media (hover: hover) {
+  .glass:hover::after {
+    opacity: 1;
+  }
+}
+
+/* Signature hero surface: deep navy glass with a gold glow and a bright top edge. */
 .bg-hero {
+  position: relative;
   background:
-    radial-gradient(120% 140% at 100% 0%, color-mix(in oklab, var(--accent-2) 70%, transparent), transparent 55%),
-    linear-gradient(135deg, var(--accent) 0%, color-mix(in oklab, var(--accent) 70%, #1b0f5c) 100%);
+    radial-gradient(90% 120% at 100% 0%, rgb(227 185 77 / 0.42), transparent 58%),
+    radial-gradient(70% 90% at 0% 100%, rgb(23 144 156 / 0.3), transparent 60%),
+    linear-gradient(140deg, #1b3a6b 0%, #0f2147 55%, #0a1730 100%);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 18px 40px -18px rgb(10 23 48 / 0.7);
 }
 
 .text-gradient {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: linear-gradient(90deg, #b98a35, #f0d58a 55%, #b98a35);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
 }
 
 .privacy .money {
@@ -173,5 +262,20 @@ textarea {
   * {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* No blur support (or the user asked for less transparency): fall back to solid surfaces. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--surface);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }

@@ -99,7 +99,7 @@ export function PriceStamp({ point, ageDays, className }: { point: PricePoint | 
 
 export function Card({ title, action, children, className, pad = true, icon }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; pad?: boolean; icon?: ReactNode }) {
   return (
-    <section className={cx("min-w-0 rounded-3xl border border-line/80 bg-surface shadow-card", className)}>
+    <section className={cx("glass min-w-0 rounded-3xl", className)}>
       {(title || action) && (
         <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 pt-4 sm:px-5">
           {title && (
@@ -140,21 +140,21 @@ export function Stat({ label, value, sub, className }: { label: ReactNode; value
   );
 }
 
-export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: "neutral" | "accent" | "warn" | "gain" | "loss" | "lime"; className?: string }) {
+export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: "neutral" | "accent" | "warn" | "gain" | "loss" | "gold"; className?: string }) {
   const tones = {
     neutral: "bg-sunken text-muted",
     accent: "bg-accent-soft text-accent",
     warn: "bg-warn-soft text-warn",
     gain: "bg-gain-soft text-gain",
     loss: "bg-loss-soft text-loss",
-    lime: "bg-lime text-lime-ink",
+    gold: "bg-gold text-gold-ink",
   } as const;
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
 export function EmptyState({ title, children, action, icon }: { title: string; children?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-line bg-surface/60 px-6 py-12 text-center">
+    <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-line/80 bg-surface/40 px-6 py-12 backdrop-blur-md text-center">
       <motion.div initial={{ scale: 0.6, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }} className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-accent-soft">
         {icon ?? <IconSparkles size={30} className="text-accent" />}
       </motion.div>
@@ -165,9 +165,9 @@ export function EmptyState({ title, children, action, icon }: { title: string; c
   );
 }
 
-export function Meter({ value, max, marks, tone = "accent", label, size = "md" }: { value: number; max: number; marks?: { at: number; label: string }[]; tone?: "accent" | "warn" | "brass" | "gain" | "loss" | "lime"; label: string; size?: "sm" | "md" }) {
+export function Meter({ value, max, marks, tone = "accent", label, size = "md" }: { value: number; max: number; marks?: { at: number; label: string }[]; tone?: "accent" | "warn" | "brass" | "gain" | "loss" | "gold"; label: string; size?: "sm" | "md" }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  const tones = { accent: "bg-gradient-to-r from-accent to-accent-2", warn: "bg-warn", brass: "bg-brass", gain: "bg-gain", loss: "bg-loss", lime: "bg-lime" } as const;
+  const tones = { accent: "bg-gradient-to-r from-accent to-gold", warn: "bg-warn", brass: "bg-brass", gain: "bg-gain", loss: "bg-loss", gold: "bg-gold" } as const;
   const h = size === "sm" ? "h-2" : "h-3";
   return (
     <div className="relative">
@@ -184,7 +184,7 @@ export function Meter({ value, max, marks, tone = "accent", label, size = "md" }
 export function Tabs<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string }) {
   const id = useId();
   return (
-    <div role="tablist" className={cx("inline-flex rounded-full bg-sunken p-1 text-sm", className)}>
+    <div role="tablist" className={cx("inline-flex rounded-full bg-sunken/70 p-1 text-sm backdrop-blur-md", className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -193,7 +193,7 @@ export function Tabs<T extends string>({ value, onChange, options, className }: 
           onClick={() => onChange(o.value)}
           className={cx("relative rounded-full px-3 py-1.5 font-semibold transition-colors", value === o.value ? "text-ink" : "text-muted hover:text-ink")}
         >
-          {value === o.value && <motion.span layoutId={`tab-${id}`} className="absolute inset-0 rounded-full bg-surface shadow-card" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
+          {value === o.value && <motion.span layoutId={`tab-${id}`} className="glass absolute inset-0 rounded-full" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
           <span className="relative">{o.label}</span>
         </button>
       ))}
@@ -204,11 +204,11 @@ export function Tabs<T extends string>({ value, onChange, options, className }: 
 // ---------------------------------------------------------------------------
 // Controls
 
-export function Button({ variant = "secondary", size = "md", className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" | "lime"; size?: "sm" | "md" | "lg" }) {
+export function Button({ variant = "secondary", size = "md", className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" | "gold"; size?: "sm" | "md" | "lg" }) {
   const v = {
-    primary: "bg-accent text-accent-ink shadow-[0_8px_20px_-8px_var(--accent)] hover:brightness-110",
-    lime: "bg-lime text-lime-ink hover:brightness-105",
-    secondary: "border border-line bg-surface hover:border-accent/40 hover:bg-accent-soft/40",
+    primary: "bg-accent text-accent-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_10px_22px_-10px_var(--accent)] hover:brightness-110",
+    gold: "bg-gold text-gold-ink hover:brightness-105",
+    secondary: "glass hover:brightness-105",
     ghost: "text-muted hover:bg-sunken hover:text-ink",
     danger: "border border-loss/40 text-loss hover:bg-loss-soft",
   }[variant];
@@ -240,7 +240,7 @@ export function Field({ label, hint, children, className, error }: { label: Reac
 }
 
 const inputCls =
-  "w-full min-w-0 rounded-2xl border border-line bg-paper/60 px-3.5 py-2.5 text-sm text-ink placeholder:text-faint transition focus:border-accent focus:bg-surface focus:outline-none focus:ring-4 focus:ring-accent/15";
+  "w-full min-w-0 rounded-2xl border border-line bg-sunken/50 px-3.5 py-2.5 text-sm text-ink placeholder:text-faint transition focus:border-accent focus:bg-surface focus:outline-none focus:ring-4 focus:ring-accent/15";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(inputCls, props.className)} />;
@@ -296,14 +296,14 @@ export function Sheet({ open, onClose, title, children, footer, wide }: { open: 
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
-          <motion.div className="absolute inset-0 bg-[#0c0a18]/50 backdrop-blur-sm" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+          <motion.div className="absolute inset-0 bg-[#050a16]/45 backdrop-blur-md" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
           <motion.div
             ref={ref}
             initial={{ y: 60, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className={cx("relative flex max-h-[92dvh] w-full flex-col rounded-t-[2rem] border border-line bg-surface shadow-2xl sm:rounded-[2rem]", wide ? "sm:max-w-3xl" : "sm:max-w-lg")}
+            className={cx("relative flex max-h-[92dvh] w-full flex-col glass glass-strong rounded-t-[2rem] shadow-2xl sm:rounded-[2rem]", wide ? "sm:max-w-3xl" : "sm:max-w-lg")}
           >
             <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-line sm:hidden" aria-hidden />
             <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-3 sm:pt-5">

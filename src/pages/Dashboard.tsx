@@ -15,6 +15,7 @@ import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
 import { endDemo, useDemo } from "../sync/demo";
 import { CategoryIcon } from "../ui/categoryIcons";
+import { BankBalancesCard, GoalsCard } from "../ui/DashCards";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
 import { IconAlert, IconBanknote, IconChevron, IconHand, IconReceiptPlain, IconRepeat, IconRocket, IconTrendUp, IconWallet } from "../ui/icons";
 
@@ -113,7 +114,7 @@ export function DashboardPage() {
         transition={{ type: "spring", stiffness: 260, damping: 26 }}
         className="relative overflow-hidden rounded-[2rem] bg-hero p-5 shadow-card sm:p-7"
       >
-        <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-lime/30 blur-3xl" />
+        <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-gold/30 blur-3xl" />
         <div className="relative">
           <div className="text-sm font-semibold text-white/80">Your net worth</div>
           <AnimatedMoney p={pf.netWorth} className="display mt-1 block text-[2.6rem] leading-none font-extrabold sm:text-6xl" />
@@ -123,7 +124,7 @@ export function DashboardPage() {
                 {pf.dayChange >= 0 ? "▲" : "▼"} <span className="money">{formatINR(Math.abs(pf.dayChange))}</span> today ({formatPct(dayPct, { sign: true })})
               </span>
             )}
-            {pf.xirr !== null && <span className="inline-flex items-center gap-1 rounded-full bg-lime px-3 py-1 text-sm font-bold text-lime-ink">XIRR {formatPct(pf.xirr * 100, { sign: true })}</span>}
+            {pf.xirr !== null && <span className="inline-flex items-center gap-1 rounded-full bg-gold px-3 py-1 text-sm font-bold text-gold-ink">XIRR {formatPct(pf.xirr * 100, { sign: true })}</span>}
           </div>
         </div>
         <div className="relative mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -143,6 +144,11 @@ export function DashboardPage() {
       <SavingsGoalCard />
 
       <MoneySnapshot />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BankBalancesCard />
+        <GoalsCard />
+      </div>
 
       <NetWorthChart />
 
