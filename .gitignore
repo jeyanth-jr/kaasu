@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.cache/
+*.log
+.DS_Store
+.env
+.env.*
+# Personal data never belongs in the repo
+*.csv
+!src/**/fixtures/*.csv
+kaasu-backup-*.json
+*.pdf
