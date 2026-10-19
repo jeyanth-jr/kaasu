@@ -255,6 +255,10 @@ export interface Settings {
   salary?: { amount: Paise; day: number; accountId?: string; employer?: string };
   /** Monthly spending budget per category id. */
   categoryBudgets: Record<string, Paise>;
+  /** First name for greetings. */
+  displayName?: string;
+  /** Set once the welcome flow has been completed or skipped. */
+  onboarded?: boolean;
   /** Monthly savings target. Unset = your SIP/RD/chit plans, else 20% of salary. */
   savingsGoal?: Paise;
   /** Milestones already celebrated (kept in settings so every device agrees and none repeats). */

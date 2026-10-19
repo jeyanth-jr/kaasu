@@ -13,6 +13,7 @@ import { useCommitments } from "../ui/money";
 import { PaydayBanner, SalarySetupSheet } from "./Money";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
+import { endDemo, useDemo } from "../sync/demo";
 import { CategoryIcon } from "../ui/categoryIcons";
 import { SavingsGoalCard } from "../ui/SavingsGoal";
 import { IconAlert, IconBanknote, IconChevron, IconHand, IconReceiptPlain, IconRepeat, IconRocket, IconTrendUp, IconWallet } from "../ui/icons";
@@ -29,13 +30,14 @@ export function DashboardPage() {
   const [busy, setBusy] = useState(false);
   const [setup, setSetup] = useState(false);
   const hasSample = instruments.some((i) => i.sample);
+  const demo = useDemo();
 
   if (!ready) return <div className="py-20 text-center text-muted">Counting your kaasu…</div>;
 
   if (instruments.length === 0 && cash.length === 0) {
     return (
       <div className="mx-auto max-w-2xl pt-6">
-        <PageHeader title="Hey there" sub="Kaasu tracks your salary, spending and every investment you own, privately." />
+        <PageHeader title={settings.displayName ? `Hey ${settings.displayName}` : "Hey there"} sub="Kaasu tracks your salary, spending and every investment you own, privately." />
         <EmptyState
           icon={<IconRocket size={34} className="text-accent" />}
           title="Let's get your money map going"
@@ -79,7 +81,8 @@ export function DashboardPage() {
       <div>
         <div className="text-sm font-semibold text-muted">{formatDate(asOf)}</div>
         <div className="display text-3xl font-extrabold sm:text-4xl">
-          {greeting()}{" "}
+          {greeting()}
+          {settings.displayName ? `, ${settings.displayName}` : ""}{" "}
           <motion.span className="inline-block origin-[70%_70%]" animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ duration: 1.2, delay: 0.3 }}>
             <IconHand size={30} className="text-accent" />
           </motion.span>
@@ -92,10 +95,11 @@ export function DashboardPage() {
           <button
             className="font-semibold text-ink underline underline-offset-2"
             onClick={async () => {
+              if (demo) return void (await endDemo());
               if (confirm("Remove all sample holdings and entries? Your own data stays.")) await clearSampleData();
             }}
           >
-            Clear sample data
+            {demo ? "Exit demo and create an account" : "Clear sample data"}
           </button>
         </Callout>
       )}

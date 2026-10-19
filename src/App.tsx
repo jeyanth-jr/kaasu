@@ -36,7 +36,11 @@ import {
 } from "./ui/icons";
 import { EntrySheet, PaydaySheet } from "./ui/MoneySheets";
 import { AccountButton } from "./sync/AccountButton";
-import { useSyncActive } from "./sync/state";
+import { syncConfigured } from "./sync/config";
+import { endDemo, useDemo } from "./sync/demo";
+import { useSyncActive, useSyncState } from "./sync/state";
+import { Logo } from "./ui/Logo";
+import { Onboarding } from "./ui/Onboarding";
 
 // Pages load on demand so the first screen arrives quickly on a phone.
 const DashboardPage = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.DashboardPage })));
@@ -49,6 +53,8 @@ const AllocationPage = lazy(() => import("./pages/Allocation").then((m) => ({ de
 const TaxPage = lazy(() => import("./pages/Tax").then((m) => ({ default: m.TaxPage })));
 const CalendarPage = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.CalendarPage })));
 const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
+const LandingPage = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
+const LegalPage = lazy(() => import("./pages/Legal").then((m) => ({ default: m.LegalPage })));
 
 // ---------------------------------------------------------------------------
 // Global add actions (investment transaction, money entry, payday)
@@ -127,15 +133,6 @@ function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: 
   );
 }
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-2xl bg-hero text-lg font-black shadow-card">₹</span>
-      <span className="display text-2xl font-extrabold">kaasu</span>
-    </div>
-  );
-}
-
 function Shell({ children }: { children: ReactNode }) {
   const { settings, instruments, ready } = useData();
   const { openChooser } = useAdd();
@@ -174,6 +171,7 @@ function Shell({ children }: { children: ReactNode }) {
   const nextTheme: Theme = theme === "system" ? "dark" : theme === "dark" ? "light" : "system";
   const backupAge = settings.lastBackupAt ? daysBetween(settings.lastBackupAt.slice(0, 10), todayISO()) : null;
   const syncing = useSyncActive();
+  const demo = useDemo();
   const needsBackup = ready && !syncing && instruments.some((i) => !i.sample) && (backupAge === null || backupAge > 14);
   const moreActive = MORE.some((m) => location.pathname.startsWith(m.to));
 
@@ -245,9 +243,17 @@ function Shell({ children }: { children: ReactNode }) {
             </button>
           </div>
         )}
-        {needsBackup && !report && (
+        {demo && !report && (
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-y border-accent/25 bg-accent-soft px-4 py-2 text-center text-xs font-semibold text-accent">
+            You're exploring a demo with sample data.
+            <button className="underline underline-offset-2" onClick={() => void endDemo()}>
+              Create a free account →
+            </button>
+          </div>
+        )}
+        {needsBackup && !report && !demo && (
           <NavLink to="/settings#backup" className="block border-y border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-xs font-semibold text-warn">
-            {backupAge === null ? "No backup yet." : `Last backup ${backupAge} days ago.`} Your data only lives on this device. Back up or turn on sync →
+            {backupAge === null ? "No backup yet." : `Last backup ${backupAge} days ago.`} Your data only lives on this device. Back it up →
           </NavLink>
         )}
       </header>
@@ -346,6 +352,38 @@ function AddChooser({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
+function Splash() {
+  return (
+    <div className="grid min-h-dvh place-items-center">
+      <div className="flex flex-col items-center gap-4">
+        <Logo className="animate-pulse" />
+        <span className="text-xs font-semibold text-faint">Opening your account…</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * With cloud accounts configured this is a service: visitors who aren't signed in see the landing
+ * page (and the legal pages) instead of the app, unless they've chosen the demo.
+ */
+function Gate({ children }: { children: ReactNode }) {
+  const s = useSyncState();
+  const demo = useDemo();
+  const { pathname } = useLocation();
+  if (!syncConfigured) return <>{children}</>;
+  if (s.status === "loading") return <Splash />;
+  if (s.status === "signed-out" && !demo) {
+    const legal = pathname === "/privacy" ? "privacy" : pathname === "/terms" ? "terms" : null;
+    return (
+      <Suspense fallback={<Splash />}>
+        {legal ? <LegalPage doc={legal} standalone /> : <LandingPage />}
+      </Suspense>
+    );
+  }
+  return <>{children}</>;
+}
+
 export function App() {
   const [add, setAdd] = useState<{ open: boolean; instrumentId?: string; txnId?: string }>({ open: false });
   const [money, setMoney] = useState<EntryKind | null>(null);
@@ -361,6 +399,7 @@ export function App() {
     <DataProvider>
       <AddContext.Provider value={ctx}>
         <HashRouter>
+          <Gate>
           <Shell>
             <Routes>
               <Route path="/" element={<DashboardPage />} />
@@ -373,6 +412,8 @@ export function App() {
               <Route path="/tax" element={<TaxPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+              <Route path="/terms" element={<LegalPage doc="terms" />} />
               <Route path="*" element={<DashboardPage />} />
             </Routes>
           </Shell>
@@ -381,6 +422,8 @@ export function App() {
           <AddTransactionSheet open={add.open} instrumentId={add.instrumentId} txnId={add.txnId} onClose={() => setAdd({ open: false })} />
           <EntrySheet open={money !== null} kind={money ?? "expense"} onClose={() => setMoney(null)} />
           <PaydaySheet open={payday} onClose={() => setPayday(false)} />
+          <Onboarding />
+          </Gate>
         </HashRouter>
       </AddContext.Provider>
     </DataProvider>

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { db, nowISO, requestPersistence, saveSettings } from "../db/db";
 import { backupFileName, clearAll, createBackup, parseBackup, restoreBackup } from "../db/backup";
 import { decryptText, encryptText, isEncrypted } from "../db/crypto";
@@ -42,7 +42,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" sub="Everything is stored in this browser only." />
+      <PageHeader title="Settings" sub={syncConfigured ? "Your account, preferences and data." : "Everything is stored in this browser only."} />
       <div className="flex flex-col gap-4">
         {syncConfigured && (
           <Section id="account" title="Account & sync" sub="Back up to the cloud and keep your phone and laptop in step.">
@@ -132,7 +132,7 @@ export function SettingsPage() {
           <p className="mt-3 text-xs text-faint">CAS (CAMS/KFintech consolidated statement) PDF import isn't supported yet. Export your CAS transactions to CSV and import them here.</p>
         </Section>
 
-        <Section id="backup" title="Backup & restore" sub="Your data never leaves this device, so backups are your only safety net. Keep the file somewhere safe (it contains your full portfolio).">
+        <Section id="backup" title="Backup & restore" sub={syncConfigured ? "Your data is saved to your account. A backup file is an extra copy you keep yourself. Store it somewhere safe: it contains your full portfolio." : "Your data never leaves this device, so backups are your only safety net. Keep the file somewhere safe (it contains your full portfolio)."}>
           <BackupSection lastBackupAt={settings.lastBackupAt} counts={{ instruments: instruments.length, txns: txns.length, prices: prices.length }} />
         </Section>
 
@@ -161,7 +161,15 @@ export function SettingsPage() {
 
         <Card>
           <p className="text-xs leading-relaxed text-muted">
-            Kaasu is a personal tracker, not investment or tax advice. Prices come from AMFI and a public quote source through a proxy on your own machine, and every price shows its date and source. Your holdings never leave this browser.
+            Kaasu is a personal tracker, not investment, tax or legal advice, and not a SEBI-registered adviser. Fund NAVs come from AMFI and stock prices from Google or Yahoo Finance through our price service, which only sees the symbols and scheme codes you track. Every price shows its date and source and may be delayed.
+          </p>
+          <p className="mt-2 flex gap-4 text-xs font-semibold">
+            <Link to="/privacy" className="text-accent">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="text-accent">
+              Terms of Use
+            </Link>
           </p>
         </Card>
       </div>
@@ -348,7 +356,7 @@ function BackupSection({ lastBackupAt, counts }: { lastBackupAt?: string; counts
           <Button
             variant="danger"
             onClick={async () => {
-              if (!confirm("Delete ALL instruments, transactions and prices from this browser? Download a backup first.")) return;
+              if (!confirm(syncConfigured ? "Delete ALL your data, here and in your cloud account? Download a backup first." : "Delete ALL instruments, transactions and prices from this browser? Download a backup first.")) return;
               if (!confirm("Really delete everything? This cannot be undone.")) return;
               await clearAll();
               await db.settings.update("settings", { sampleLoaded: false });

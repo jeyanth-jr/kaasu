@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { formatDate } from "../domain/dates";
 import { Badge, Button, Callout, Field, Input, Sheet } from "../ui/components";
 import { IconCloud, IconMail, IconShield } from "../ui/icons";
@@ -23,7 +23,7 @@ export function SyncPanel() {
   return <SignInForm />;
 }
 
-function SignInForm() {
+export function SignInForm({ intro, hidePrivacy }: { intro?: ReactNode; hidePrivacy?: boolean }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -44,9 +44,7 @@ function SignInForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
-        Sign in to keep your data backed up and in sync across your phone and laptop, and to fetch live prices. Kaasu works fully without an account too: everything stays on this device.
-      </p>
+      <p className="text-sm text-muted">{intro ?? "Enter your email and we'll send a sign-in link. No password needed. If you're new, this creates your account."}</p>
       {error && <Callout tone="warn">{error}</Callout>}
       {!sent ? (
         <form
@@ -92,7 +90,7 @@ function SignInForm() {
       <Button onClick={() => void run(signInWithGoogle)} disabled={busy}>
         Continue with Google
       </Button>
-      <PrivacyNote />
+      {!hidePrivacy && <PrivacyNote />}
     </div>
   );
 }
@@ -228,7 +226,7 @@ function PrivacyNote() {
     <div className="flex gap-2.5 rounded-2xl border border-line p-3 text-xs text-muted">
       <IconShield size={16} className="mt-0.5 shrink-0 text-accent" />
       <span>
-        Your data is stored in your private cloud database, encrypted in transit and at rest, and only your login can read it. It is not end-to-end encrypted: the service operator can technically access it. Sample data never leaves this device.
+        Your data is stored in your private account, encrypted in transit and at rest, and only your login can read it. It is not end-to-end encrypted, so the service operator can technically access it. See the Privacy page for details.
       </span>
     </div>
   );

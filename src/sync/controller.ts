@@ -3,6 +3,7 @@ import { db } from "../db/db";
 import { setTokenProvider } from "../prices/api";
 import { syncConfigured } from "./config";
 import { claimDevice, getMeta, syncOnce, wipeLocal } from "./engine";
+import { setDemo } from "./demo";
 import { getSyncState, setSyncState } from "./state";
 import { supabase, supabaseRemote } from "./supabase";
 import { installTracking } from "./track";
@@ -69,6 +70,7 @@ async function onSession(next: Session | null): Promise<void> {
     setSyncState({ status: "signed-out", email: undefined, userId: undefined, error: undefined });
     return;
   }
+  setDemo(false); // a real account replaces demo mode
   setSyncState({ email: next.user.email ?? undefined, userId: next.user.id });
   const claim = await claimDevice(db, next.user.id);
   if (claim === "different") {
@@ -86,7 +88,10 @@ export function initSync(): void {
   const client = supabase;
   installTracking(db, scheduleSync);
   setTokenProvider(async () => (await client.auth.getSession()).data.session?.access_token ?? null);
-  setSyncState({ status: "signed-out" });
+  // If the auth library never reports (blocked storage, network), don't leave the user on a splash screen.
+  setTimeout(() => {
+    if (getSyncState().status === "loading") setSyncState({ status: "signed-out" });
+  }, 5000);
 
   client.auth.onAuthStateChange((event, s) => {
     // INITIAL_SESSION / SIGNED_IN / TOKEN_REFRESHED / SIGNED_OUT / USER_UPDATED

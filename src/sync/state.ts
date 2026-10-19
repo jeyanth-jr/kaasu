@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
+import { syncConfigured } from "./config";
 
-export type SyncStatus = "unconfigured" | "signed-out" | "idle" | "syncing" | "error" | "offline" | "needs-decision";
+export type SyncStatus = "unconfigured" | "loading" | "signed-out" | "idle" | "syncing" | "error" | "offline" | "needs-decision";
 
 export interface SyncState {
   status: SyncStatus;
@@ -12,7 +13,8 @@ export interface SyncState {
   error?: string;
 }
 
-let state: SyncState = { status: "unconfigured", pending: 0 };
+// With cloud accounts configured, nothing is shown until we know whether someone is signed in.
+let state: SyncState = { status: syncConfigured ? "loading" : "unconfigured", pending: 0 };
 const listeners = new Set<() => void>();
 
 export function getSyncState(): SyncState {

@@ -7,9 +7,10 @@ import { beforeAll, describe, expect, it } from "vitest";
  * rules. Supabase's `auth` schema and roles are stubbed the way Supabase
  * provides them (auth.uid() reads the JWT subject from a session setting).
  */
-const migration = readFileSync(new URL("./migrations/0001_init.sql", import.meta.url), "utf8");
+const migrations = ["0001_init.sql", "0002_quota.sql"].map((f) => readFileSync(new URL(`./migrations/${f}`, import.meta.url), "utf8"));
 const A = "11111111-1111-1111-1111-111111111111";
 const B = "22222222-2222-2222-2222-222222222222";
+const C = "33333333-3333-3333-3333-333333333333";
 
 let db: PGlite;
 
@@ -43,7 +44,7 @@ beforeAll(async () => {
     grant select, delete on auth.users to authenticated; -- stands in for the dashboard's service access
     insert into auth.users values ('${A}'), ('${B}');
   `);
-  await db.exec(migration);
+  for (const m of migrations) await db.exec(m);
   // delete_my_account runs as its (privileged) owner, not as the caller.
 });
 
@@ -104,13 +105,53 @@ describe("records table: row-level security", () => {
   });
 });
 
+describe("per-user record quota", () => {
+  const usage = async (user: string) =>
+    Number(((await as(user, () => db.query("select n from public.record_usage"))) as { rows: { n: string }[] }).rows[0]?.n ?? 0);
+
+  it("counts inserts once, ignores updates, and decrements on delete", async () => {
+    await db.exec(`insert into auth.users values ('${C}')`);
+    await as(C, () => upsert(C, "txns", "a", { n: 1 }));
+    await as(C, () => upsert(C, "txns", "b", { n: 1 }));
+    await as(C, () => upsert(C, "txns", "a", { n: 2 })); // an update, not a new row
+    expect(await usage(C)).toBe(2);
+    await as(C, () => db.query("delete from public.records where id = 'b'"));
+    expect(await usage(C)).toBe(1);
+  });
+
+  it("refuses rows beyond the cap but still allows editing existing ones", async () => {
+    await db.exec("select set_config('app.max_records_per_user', '3', false)");
+    try {
+      await as(C, () => upsert(C, "txns", "c", { n: 1 })); // 2
+      await as(C, () => upsert(C, "txns", "d", { n: 1 })); // 3
+      await expect(as(C, () => upsert(C, "txns", "e", { n: 1 }))).rejects.toThrow(/record limit reached \(3 records\)/);
+      expect(await usage(C)).toBe(3); // the refused row left no trace
+      await as(C, () => upsert(C, "txns", "c", { n: 9 })); // editing at the cap is fine
+      await as(C, () => upsert(C, "txns", "d", null, true)); // so is turning a row into a tombstone
+    } finally {
+      await db.exec("select set_config('app.max_records_per_user', '', false)");
+    }
+  });
+
+  it("lets a user see their own usage but never change it or see another's", async () => {
+    const mine = (await as(C, () => db.query("select user_id from public.record_usage"))) as { rows: { user_id: string }[] };
+    expect(mine.rows.map((r) => r.user_id)).toEqual([C]);
+    await expect(as(C, () => db.query("update public.record_usage set n = 0"))).rejects.toThrow(/permission denied/);
+    await expect(as(C, () => db.query(`insert into public.record_usage values ('${A}', 0)`))).rejects.toThrow(/permission denied/);
+    await expect(as(null, () => db.query("select * from public.record_usage"))).rejects.toThrow(/permission denied/);
+  });
+});
+
 describe("delete_my_account", () => {
   it("removes the login and every record for that user only", async () => {
     await as(B, () => db.query("select public.delete_my_account()"));
     const users = await db.query<{ id: string }>("select id from auth.users");
-    expect(users.rows.map((r) => r.id)).toEqual([A]);
+    expect(users.rows.map((r) => r.id).sort()).toEqual([A, C].sort()); // B is gone, everyone else untouched
     const left = await db.query<{ user_id: string }>("select distinct user_id from public.records");
-    expect(left.rows.map((r) => r.user_id)).toEqual([A]);
+    expect(left.rows.map((r) => r.user_id)).not.toContain(B);
+    expect(left.rows.map((r) => r.user_id)).toContain(A);
+    const usage = await db.query<{ user_id: string }>("select user_id from public.record_usage");
+    expect(usage.rows.map((r) => r.user_id)).not.toContain(B); // the counter row cascades too
   });
 
   it("refuses when not signed in", async () => {

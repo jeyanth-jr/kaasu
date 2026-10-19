@@ -2,9 +2,12 @@
 
 Salary, spending and every investment in one app, built for an Indian retail investor. It covers stocks, ETFs, mutual funds, RDs, FDs, bonds/NCDs, gold, cash and "commitments outside the portfolio".
 
-It is **local-first**: your data lives in your browser's IndexedDB and everything works with no account. Optionally, sign in to back up and sync across devices (Supabase) and fetch live prices in production (Cloudflare Worker). See [docs/DEPLOY.md](docs/DEPLOY.md).
+Kaasu is built to run as a **service**: you deploy it once, and everyone signs up with their own account (email link or Google). Each person's data is private to their login and syncs across their phone and laptop. Without cloud accounts configured it runs fully locally in the browser, which is how you develop and test it. Operating it for other people is covered in [docs/DEPLOY.md](docs/DEPLOY.md).
 
-- **Money:** log spending and income by emoji category, set category budgets, and see **safe to spend per day** for the rest of the month, a spend pace chart against last month, and a savings streak. Import a bank statement CSV (HDFC, ICICI, SBI, Axis and most others): lines are auto-categorised, duplicates are skipped on re-import, and entries can update a savings account's balance.
+- **For visitors:** a landing page with sign-up, a one-tap **demo** with sample data (no account, nothing saved), a short first-run setup (name, payday, expenses, goal), and Privacy and Terms pages.
+- **Money:** log spending and income by category, set category budgets, and see **safe to spend per day** for the rest of the month, a spend pace chart against last month, and a savings streak. Import a bank statement CSV (HDFC, ICICI, SBI, Axis and most others): lines are auto-categorised, duplicates are skipped on re-import, and entries can update a savings account's balance.
+- **Plans & debt:** every SIP, RD, gold chit and EMI on one screen with its duration, instalments done and left, what's still to pay, and the date it ends; a "what frees up when" timeline; and a Debt view with loan balances, interest paid and still to come, a debt-free date, an EMI-to-income gauge and a prepayment simulator (extra monthly or one-off) showing the interest and months saved.
+- **Savings goal and wins:** a monthly goal ring, milestones at 25/50/75/100/150%, streaks, net-worth levels and emergency-fund runway, each celebrated once with a toast, confetti and haptics (and respecting reduced motion).
 - **Payday flow:** set your in-hand salary and payday (weekend paydays move to the Friday before). When it's due Kaasu asks "did your salary land?", and one tap opens a checklist across SIPs, RD, commitments, EMIs and an emergency-fund top-up, with what's left to spend. Kaasu can't read your bank account, so you confirm the credit.
 
 - **Transactions, not balances.** Every buy, SIP, RD instalment, interest payout and redemption is a dated transaction. Holdings, average cost, P/L and XIRR are derived from them using FIFO lots.
@@ -14,8 +17,8 @@ It is **local-first**: your data lives in your browser's IndexedDB and everythin
 - **Calendar:** RD/FD/bond maturities, coupons, SIP dates, commitments and EMI end dates, plus a monthly plan comparing planned vs actually invested.
 - **Import/export:** CSV import with a column-mapping screen, full JSON backup and restore (optionally encrypted), and a transactions CSV export.
 - **Prices:** AMFI's daily NAV file for mutual funds, and Google Finance (or Yahoo Finance, as fallback) for NSE/BSE stocks and ETFs, both through a tiny local proxy. Manual prices always work. A price is never shown without its date and source.
-- **Accounts and sync (optional):** email link or Google sign-in, per-user cloud copy protected by row-level security, last-write-wins sync across devices, account deletion. Sample data never syncs.
-- A playful violet/lime design with light and dark themes, motion, a floating phone tab bar with a quick-add button, installable as a PWA, and a privacy mode that blurs every amount.
+- **Accounts and sync:** email link or Google sign-in, a per-user cloud copy protected by row-level security and a per-user record cap, last-write-wins sync across devices, self-serve account deletion. Sample data never syncs.
+- A playful violet/lime design (Space Grotesk and Geist, Lucide icons, no emoji), light and dark themes, motion, a floating phone tab bar with a quick-add button, installable as a PWA, and a privacy mode that blurs every amount.
 
 > Kaasu is a personal tracker, not investment or tax advice.
 
@@ -148,7 +151,7 @@ Domain code has no React or IndexedDB dependency. Everything on screen is derive
 
 ## Tests
 
-`npm test` runs 127 tests:
+`npm test` runs 160+ tests:
 
 - **XIRR:** the Excel reference case, leap years, SIPs, extreme rates.
 - **FIFO:** partial lots, charges, splits/bonus, fractional units, same-day ordering, oversell.
@@ -158,7 +161,9 @@ Domain code has no React or IndexedDB dependency. Everything on screen is derive
 - **Money:** monthly totals, budgets, payday timing (weekends), safe-to-spend, savings streak, bank-statement parsing and categorisation, posting entries to account balances, duplicate-safe statement import.
 - **Storage:** sample data, backup round-trip and corruption checks, encryption, import undo.
 - **Price API:** daily NAV caching and stale fallback, truncated-download rejection, quote fallback, JWT verification (expired, wrong audience, forged), CORS allow-list, rate limiting.
-- **Database:** the real migration run on in-process Postgres: row-level security between users, anonymous lockout, server-assigned sync cursor, tombstones, account deletion.
+- **Plans and debt:** the standard EMI formula, amortisation integrity (principal adds up, balance ends at zero, month-end clamping), loan status from the schedule, prepayment savings, debt summary, and schedule counts (instalments done/left, unrecorded, ending soon, the monthly-load ladder).
+- **Savings wins:** what counts as saved, the goal fallback chain, milestone detection that never repeats or replays history, tiering, and goal-change handling.
+- **Database:** both migrations run on in-process Postgres: row-level security between users, anonymous lockout, server-assigned sync cursor, tombstones, per-user record quota, account deletion.
 - **Sync:** two simulated devices through a fake cloud: creates/edits/deletes, composite keys, conflicts, no echo, sample data excluded, bulk ops and `clear()`, paging, account ownership of a device, and the exact PostgREST requests the Supabase adapter sends.
 
 ## Roadmap

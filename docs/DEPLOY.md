@@ -6,9 +6,9 @@ Three pieces, each independent:
 | --- | --- | --- |
 | Web app | **Vercel** | The static React app. Your data lives in each browser (IndexedDB). |
 | Price API | **Cloudflare Worker** | Fetches AMFI NAVs and Google/Yahoo quotes. Requires a signed-in user. |
-| Accounts + cloud copy | **Supabase** | Login, and a private per-user database for sync/backup. |
+| Accounts + data | **Supabase** | Login, and each user's private data, synced across their devices. |
 
-Kaasu is **local-first**: it works with none of this configured. The Worker and Supabase add sign-in, multi-device sync and live prices in production. Do them in this order, because each step produces a value the next one needs.
+This guide is for the **operator**: you deploy Kaasu once as a service and your users sign up with their own accounts. Once Supabase is configured, signed-out visitors see the landing page and sign-up, never the app (they can try a demo that stores nothing). With none of it configured, Kaasu runs locally in the browser, which is how you develop it. Do the steps in this order, because each produces a value the next one needs.
 
 You need free accounts on all three. I couldn't create them or deploy for you: each requires you to log in.
 
@@ -17,7 +17,7 @@ You need free accounts on all three. I couldn't create them or deploy for you: e
 ## 1. Supabase (accounts and database)
 
 1. Create a project at supabase.com. Note the **Project URL** and the **anon / publishable key** (Project Settings → API). Never use the `service_role` key anywhere in this repo.
-2. **SQL editor → New query**, paste the whole of [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql), and run it. It creates the `records` table with row-level security (each user can only touch their own rows), a server-assigned sync cursor, and a `delete_my_account()` function. (Or use the Supabase CLI: `supabase link` then `supabase db push`.)
+2. **SQL editor → New query**: run [`0001_init.sql`](../supabase/migrations/0001_init.sql), then [`0002_quota.sql`](../supabase/migrations/0002_quota.sql). They create the `records` table with row-level security (each user can only touch their own rows), a server-assigned sync cursor, `delete_my_account()`, and a per-user record cap (default 250,000; change it with `alter database postgres set app.max_records_per_user = '100000';`). (Or use the Supabase CLI: `supabase link` then `supabase db push`.)
 3. **Authentication → URL Configuration**:
    - Site URL: your Vercel URL, e.g. `https://kaasu.vercel.app`
    - Redirect URLs: add `https://kaasu.vercel.app/**` and `http://localhost:5173/**`. Add preview URLs too if you use them.
@@ -76,6 +76,29 @@ Deploy. Then make sure the final Vercel URL is in Supabase's redirect URLs (step
 3. Click the refresh-prices button. With no sign-in you get "Sign in to fetch live prices"; signed in, prices update.
 
 ---
+
+## Running it as a service: operator checklist
+
+Do these before inviting people.
+
+**Legal and trust**
+- Set `VITE_COMPANY_NAME` and `VITE_CONTACT_EMAIL` in Vercel. They appear in the Privacy Policy and Terms (and name your grievance contact).
+- **Have the Privacy Policy and Terms reviewed by a lawyer.** They are a template in `src/pages/Legal.tsx` that describes how the software behaves (including that data is *not* end-to-end encrypted), not legal advice. Kaasu gives tax estimates and portfolio analytics; the app and Terms say it is not a SEBI-registered adviser. If you plan to offer anything that looks like investment advice to the public, take legal advice first. Because you will hold personal financial data of people in India, read up on the Digital Personal Data Protection Act, 2023 (consent, access/erasure requests, breach notice, grievance officer).
+
+**Abuse and cost**
+- **Sign-up abuse:** Supabase → Authentication → Attack Protection: enable CAPTCHA (Cloudflare Turnstile or hCaptcha) and keep email rate limits on. The login form in this repo does not render a CAPTCHA widget yet, so enable it together with adding the widget, or rely on Supabase's rate limits and a custom SMTP sender until you do.
+- **Email delivery:** configure your own SMTP in Supabase. The default sender is limited to a few emails an hour and will block real sign-ups.
+- **Price service:** add a Cloudflare rate-limiting rule on the Worker route. The Worker already requires a signed-in user and applies a per-isolate limit.
+- **Storage:** the per-user record cap (step 1.2) bounds how much one account can store.
+
+**Reliability**
+- Supabase **free** projects pause after a week of inactivity and have no managed backups. For a real service use a paid plan with daily backups (and point-in-time recovery if you can afford it).
+- Cloudflare Workers **Paid** plan is recommended for the price service (see the CPU note above).
+- Watch Supabase logs and Cloudflare analytics; set alerts for auth errors and 5xx rates.
+
+**Privacy promises you are making**
+- Users can export their data and delete their account themselves (Settings). Backups held by Supabase expire on their own schedule, which the Privacy Policy mentions.
+- You, as the operator, can technically read user data in the database. Limit who has dashboard access, and turn on two-factor auth for every provider account. If you want to be unable to read it, end-to-end encryption is the roadmap item.
 
 ## Local development
 
