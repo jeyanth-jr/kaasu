@@ -63,6 +63,32 @@ function layoutFromHeader(cols: string[]): Layout | null {
   };
 }
 
+function parseLine(line: string, layout: Layout, fundHouse: string | undefined, category: string | undefined): AmfiScheme | null {
+  const parts = line.split(";").map((p) => p.trim());
+  const code = parts[layout.code];
+  if (!code || !/^\d+$/.test(code)) return null;
+  const nav = Number(parts[layout.nav]);
+  const date = amfiDate(parts[layout.date] ?? "");
+  if (!Number.isFinite(nav) || nav <= 0 || !date) return null;
+  const isinG = parts[layout.isinG];
+  const isinR = parts[layout.isinR];
+  const extras = [layout.plan, layout.option].map((i) => (i === null ? "" : (parts[i] ?? ""))).filter(Boolean);
+  const baseName = parts[layout.name] ?? "";
+  return {
+    code,
+    name: extras.length ? `${baseName} - ${extras.join(" - ")}` : baseName,
+    isinGrowth: isinG && isinG !== "-" ? isinG : undefined,
+    isinReinvest: isinR && isinR !== "-" ? isinR : undefined,
+    nav,
+    date,
+    fundHouse,
+    category,
+  };
+}
+
+const CATEGORY_RE = /schemes?\s*\(/i;
+const categoryOf = (heading: string) => heading.replace(/^.*?\(|\)\s*$/g, "").trim();
+
 export function parseNavAll(text: string): AmfiScheme[] {
   const out: AmfiScheme[] = [];
   let category: string | undefined;
@@ -73,36 +99,29 @@ export function parseNavAll(text: string): AmfiScheme[] {
     if (!line) continue;
     if (!line.includes(";")) {
       // Headings alternate between "Open Ended Schemes(Equity Scheme - Large Cap Fund)" and fund-house names.
-      if (/schemes?\s*\(/i.test(line)) category = line.replace(/^.*?\(|\)\s*$/g, "").trim();
+      if (CATEGORY_RE.test(line)) category = categoryOf(line);
       else fundHouse = line;
       continue;
     }
-    const parts = line.split(";").map((p) => p.trim());
-    if (/^scheme\s*code$/i.test(parts[0] ?? "")) {
-      layout = layoutFromHeader(parts) ?? LEGACY;
+    if (/^scheme\s*code\s*;/i.test(line)) {
+      layout = layoutFromHeader(line.split(";")) ?? LEGACY;
       continue;
     }
-    const code = parts[layout.code];
-    if (!code || !/^\d+$/.test(code)) continue;
-    const nav = Number(parts[layout.nav]);
-    const date = amfiDate(parts[layout.date] ?? "");
-    if (!Number.isFinite(nav) || nav <= 0 || !date) continue;
-    const isinG = parts[layout.isinG];
-    const isinR = parts[layout.isinR];
-    const extras = [layout.plan, layout.option].map((i) => (i === null ? "" : (parts[i] ?? ""))).filter(Boolean);
-    const baseName = parts[layout.name] ?? "";
-    out.push({
-      code,
-      name: extras.length ? `${baseName} - ${extras.join(" - ")}` : baseName,
-      isinGrowth: isinG && isinG !== "-" ? isinG : undefined,
-      isinReinvest: isinR && isinR !== "-" ? isinR : undefined,
-      nav,
-      date,
-      fundHouse,
-      category,
-    });
+    const s = parseLine(line, layout, fundHouse, category);
+    if (s) out.push(s);
   }
   return out;
+}
+
+function scoreScheme(name: string, words: string[]): number | null {
+  const n = name.toLowerCase();
+  if (!words.every((w) => n.includes(w))) return null;
+  let score = 0;
+  if (/direct/.test(n)) score += 2;
+  if (/growth/.test(n)) score += 2;
+  if (/idcw|dividend|bonus/.test(n)) score -= 2;
+  if (n.startsWith(words[0]!)) score += 1;
+  return score - n.length / 200;
 }
 
 /** Rank scheme-name matches: all words present, preferring Direct Growth plans. */
@@ -112,15 +131,98 @@ export function searchSchemes(schemes: AmfiScheme[], q: string, limit = 20): Amf
   if (/^\d+$/.test(q.trim())) return schemes.filter((s) => s.code.startsWith(q.trim())).slice(0, limit);
   const scored: { s: AmfiScheme; score: number }[] = [];
   for (const s of schemes) {
-    const n = s.name.toLowerCase();
-    if (!words.every((w) => n.includes(w))) continue;
-    let score = 0;
-    if (/direct/.test(n)) score += 2;
-    if (/growth/.test(n)) score += 2;
-    if (/idcw|dividend|bonus/.test(n)) score -= 2;
-    if (n.startsWith(words[0]!)) score += 1;
-    score -= n.length / 200;
-    scored.push({ s, score });
+    const score = scoreScheme(s.name, words);
+    if (score !== null) scored.push({ s, score });
   }
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map((x) => x.s);
+}
+
+/**
+ * Lookups over the raw NAVAll text without parsing every line, so a request
+ * stays inside a serverless CPU budget: string search is native and fast, and
+ * only matching lines are parsed. Results equal parseNavAll's.
+ */
+export class NavIndex {
+  private readonly text: string;
+  private lower: string | null = null;
+  private readonly layout: Layout;
+
+  constructor(raw: string) {
+    this.text = "\n" + raw.replace(/\r/g, "");
+    const headerAt = this.text.search(/\nscheme\s*code\s*;/i);
+    if (headerAt >= 0) {
+      const end = this.text.indexOf("\n", headerAt + 1);
+      this.layout = layoutFromHeader(this.text.slice(headerAt + 1, end < 0 ? undefined : end).split(";")) ?? LEGACY;
+    } else this.layout = LEGACY;
+  }
+
+  private lineAt(pos: number): { start: number; line: string } {
+    const start = this.text.lastIndexOf("\n", pos) + 1;
+    const end = this.text.indexOf("\n", pos);
+    return { start, line: this.text.slice(start, end < 0 ? undefined : end).trim() };
+  }
+
+  /** Nearest fund-house and category headings above a scheme line. */
+  private headingsAbove(start: number): { fundHouse?: string; category?: string } {
+    let fundHouse: string | undefined;
+    let pos = start - 1;
+    while (pos > 0) {
+      const prev = this.text.lastIndexOf("\n", pos - 1);
+      const line = this.text.slice(prev + 1, pos).trim();
+      pos = prev;
+      if (!line || line.includes(";")) continue;
+      if (CATEGORY_RE.test(line)) return { fundHouse, category: categoryOf(line) };
+      if (fundHouse === undefined) fundHouse = line;
+    }
+    return { fundHouse };
+  }
+
+  private parseAt(start: number, line: string): AmfiScheme | null {
+    const h = this.headingsAbove(start);
+    return parseLine(line, this.layout, h.fundHouse, h.category);
+  }
+
+  get(code: string): AmfiScheme | null {
+    const i = this.text.indexOf(`\n${code};`);
+    if (i < 0) return null;
+    const { start, line } = this.lineAt(i + 1);
+    return this.parseAt(start, line);
+  }
+
+  search(q: string, limit = 20): AmfiScheme[] {
+    const trimmed = q.trim();
+    if (!trimmed) return [];
+    if (/^\d+$/.test(trimmed)) {
+      const out: AmfiScheme[] = [];
+      let i = this.text.indexOf(`\n${trimmed}`);
+      while (i >= 0 && out.length < limit) {
+        const { start, line } = this.lineAt(i + 1);
+        const s = /^\d+;/.test(line) ? this.parseAt(start, line) : null;
+        if (s) out.push(s);
+        i = this.text.indexOf(`\n${trimmed}`, i + 1);
+      }
+      return out;
+    }
+    const words = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+    this.lower ??= this.text.toLowerCase();
+    const anchor = [...words].sort((a, b) => b.length - a.length)[0]!;
+    const scored: { s: AmfiScheme; score: number }[] = [];
+    const seen = new Set<number>();
+    let i = this.lower.indexOf(anchor);
+    let examined = 0;
+    while (i >= 0 && examined < 5000) {
+      const { start, line } = this.lineAt(i);
+      i = this.lower.indexOf(anchor, start + line.length + 1);
+      examined++;
+      if (seen.has(start) || !line.includes(";")) continue;
+      seen.add(start);
+      const lowerLine = line.toLowerCase();
+      if (!words.every((w) => lowerLine.includes(w))) continue;
+      const s = this.parseAt(start, line);
+      if (!s) continue;
+      const score = scoreScheme(s.name, words);
+      if (score !== null) scored.push({ s, score });
+    }
+    return scored.sort((a, b) => b.score - a.score).slice(0, limit).map((x) => x.s);
+  }
 }

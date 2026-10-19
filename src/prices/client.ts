@@ -1,7 +1,8 @@
 import { db, getSettings, nowISO } from "../db/db";
+import { ApiError, apiGet as getJson } from "./api";
 import type { Instrument, PricePoint } from "../domain/types";
 
-/** Client for the local price proxy (server/index.ts), reached via /api. */
+/** Client for the price API: the local proxy in development, the Cloudflare Worker in production. */
 
 export interface RefreshReport {
   message: string;
@@ -10,6 +11,8 @@ export interface RefreshReport {
   /** Holdings that could be priced from the web but have no symbol / AMFI code yet. */
   missing: { id: string; name: string }[];
   proxyOnline: boolean;
+  /** The production API needs a signed-in user. */
+  needsSignIn?: boolean;
 }
 
 /**
@@ -38,13 +41,6 @@ export function priceLink(i: Instrument): PriceLink {
   }
 }
 
-async function getJson<T>(url: string, timeoutMs = 35_000): Promise<T> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-  const body = (await res.json().catch(() => null)) as T | null;
-  if (!res.ok || !body) throw new Error((body as { error?: string } | null)?.error ?? `HTTP ${res.status}`);
-  return body;
-}
-
 export async function proxyOnline(): Promise<boolean> {
   try {
     const r = await getJson<{ ok: boolean }>("/api/health", 3000);
@@ -65,7 +61,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   const all = (await db.instruments.toArray()).filter((i) => !i.archived && (opts.includeSample || !i.sample));
   if (!(await proxyOnline())) {
     return {
-      message: "Price proxy isn't running (start it with npm run dev). Manual prices still work.",
+      message: "Can't reach the price service (locally, start it with npm run dev). Manual prices still work.",
       updated: 0,
       failed: [],
       missing: [],
@@ -75,6 +71,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   const points: PricePoint[] = [];
   const failed: RefreshReport["failed"] = [];
   const fellBack: string[] = [];
+  let authError = false;
   const fetchedAt = nowISO();
   const missing = all.filter((i) => priceLink(i) === "missing").map((i) => ({ id: i.id, name: i.name }));
 
@@ -89,7 +86,8 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
         else failed.push({ name: f.name, reason: "AMFI code not found" });
       }
     } catch (e) {
-      for (const f of funds) failed.push({ name: f.name, reason: (e as Error).message });
+      if (e instanceof ApiError && e.status === 401) authError = true;
+      else for (const f of funds) failed.push({ name: f.name, reason: (e as Error).message });
     }
   }
 
@@ -109,8 +107,13 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
         } else failed.push({ name: x.i.name, reason: q && "error" in q ? q.error : "no quote" });
       }
     } catch (e) {
-      for (const x of listed) failed.push({ name: x.i.name, reason: (e as Error).message });
+      if (e instanceof ApiError && e.status === 401) authError = true;
+      else for (const x of listed) failed.push({ name: x.i.name, reason: (e as Error).message });
     }
+  }
+
+  if (authError && points.length === 0) {
+    return { message: "Sign in to fetch live prices (the cloud icon, top right). Manual prices still work.", updated: 0, failed: [], missing, proxyOnline: true, needsSignIn: true };
   }
 
   if (points.length) await db.prices.bulkPut(points);

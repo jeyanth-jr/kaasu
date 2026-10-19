@@ -1,6 +1,11 @@
 # Kaasu (காசு)
 
-A local-first portfolio tracker for an Indian retail investor. It covers stocks, ETFs, mutual funds, RDs, FDs, bonds/NCDs, gold, cash and "commitments outside the portfolio". There's no login and no cloud: your data lives in your browser's IndexedDB.
+Salary, spending and every investment in one app, built for an Indian retail investor. It covers stocks, ETFs, mutual funds, RDs, FDs, bonds/NCDs, gold, cash and "commitments outside the portfolio".
+
+It is **local-first**: your data lives in your browser's IndexedDB and everything works with no account. Optionally, sign in to back up and sync across devices (Supabase) and fetch live prices in production (Cloudflare Worker). See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+- **Money:** log spending and income by emoji category, set category budgets, and see **safe to spend per day** for the rest of the month, a spend pace chart against last month, and a savings streak. Import a bank statement CSV (HDFC, ICICI, SBI, Axis and most others): lines are auto-categorised, duplicates are skipped on re-import, and entries can update a savings account's balance.
+- **Payday flow:** set your in-hand salary and payday (weekend paydays move to the Friday before). When it's due Kaasu asks "did your salary land?", and one tap opens a checklist across SIPs, RD, commitments, EMIs and an emergency-fund top-up, with what's left to spend. Kaasu can't read your bank account, so you confirm the credit.
 
 - **Transactions, not balances.** Every buy, SIP, RD instalment, interest payout and redemption is a dated transaction. Holdings, average cost, P/L and XIRR are derived from them using FIFO lots.
 - **Dashboard:** net worth, invested vs current value, today's change, overall XIRR, a net-worth-over-time chart, the emergency-fund meter, the next 90 days of cash flows, and alerts.
@@ -9,9 +14,14 @@ A local-first portfolio tracker for an Indian retail investor. It covers stocks,
 - **Calendar:** RD/FD/bond maturities, coupons, SIP dates, commitments and EMI end dates, plus a monthly plan comparing planned vs actually invested.
 - **Import/export:** CSV import with a column-mapping screen, full JSON backup and restore (optionally encrypted), and a transactions CSV export.
 - **Prices:** AMFI's daily NAV file for mutual funds, and Google Finance (or Yahoo Finance, as fallback) for NSE/BSE stocks and ETFs, both through a tiny local proxy. Manual prices always work. A price is never shown without its date and source.
-- Light and dark themes, works on a phone (bottom tabs), installable as a PWA, and a privacy mode that blurs every amount.
+- **Accounts and sync (optional):** email link or Google sign-in, per-user cloud copy protected by row-level security, last-write-wins sync across devices, account deletion. Sample data never syncs.
+- A playful violet/lime design with light and dark themes, motion, a floating phone tab bar with a quick-add button, installable as a PWA, and a privacy mode that blurs every amount.
 
 > Kaasu is a personal tracker, not investment or tax advice.
+
+## Deploying
+
+Vercel (web app) + Cloudflare Worker (price API) + Supabase (accounts and database). Step by step, with the security model and sync behaviour: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ## Run it locally
 
@@ -27,7 +37,7 @@ Open http://localhost:5173. `npm run dev` starts two processes:
 | Process | Port | What it does |
 | --- | --- | --- |
 | Vite (the app) | 5173 | Serves the UI. Requests to `/api/*` are forwarded to the proxy. |
-| Price proxy (`server/index.ts`) | 8787, localhost only | Fetches AMFI NAVs and Google/Yahoo quotes. Stores nothing about your portfolio. |
+| Price API (`server/node.ts`) | 8787, localhost only | Fetches AMFI NAVs and Google/Yahoo quotes. Stores nothing about your portfolio. The same handler runs as a Cloudflare Worker in production. |
 
 Click **Load sample data** to explore with a clearly labelled fictional portfolio, and **Clear sample data** (Dashboard or Settings) to remove it. Your own entries are never touched.
 
@@ -120,30 +130,41 @@ The harvest helper respects FIFO: it never suggests a sale that would first forc
 ## Project layout
 
 ```
-server/            price proxy (Express) + AMFI parser (tested)
+server/            price API core (web-standard Request/Response), AMFI/Google parsers, auth + CORS,
+                   Node dev server (node.ts)                                          (tested)
+worker/            Cloudflare Worker entry (Supabase JWT check, CORS, KV cache for the NAV file)
+supabase/          SQL migration (records table, RLS, delete_my_account) + schema tests on real Postgres
 src/domain/        pure TypeScript: types, money, dates, XIRR, FIFO lots, tax, allocation,
-                   equity analysis, calendar/plan, CSV parsing  (all unit-tested)
-src/db/            Dexie schema, backup/restore (+ encryption), sample data
+                   equity analysis, calendar/plan, cash flow/budgets/payday, CSV and bank
+                   statement parsing  (all unit-tested)
+src/db/            Dexie schema, backup/restore (+ encryption), money entries, sample data
+src/sync/          outbox tracking, sync engine, Supabase adapter, sign-in UI
 src/prices/        client for the proxy
 src/ui/            shared components, data provider, add-transaction sheet, CSV importer
-src/pages/         Dashboard, Holdings (+ detail), Transactions, Allocation, Tax, Calendar, Settings
+src/pages/         Dashboard, Money, Holdings (+ detail), Transactions, Allocation, Tax, Calendar, Settings
 ```
 
 Domain code has no React or IndexedDB dependency. Everything on screen is derived from transactions, prices and settings in one place (`src/ui/data.tsx` → `buildPortfolio`).
 
 ## Tests
 
-`npm test` runs 81 tests:
+`npm test` runs 127 tests:
 
 - **XIRR:** the Excel reference case, leap years, SIPs, extreme rates.
 - **FIFO:** partial lots, charges, splits/bonus, fractional units, same-day ordering, oversell.
 - **Holding period and tax:** month-end and leap-day edges, exemption, set-off order, cess, harvest helper.
 - **Domain logic:** allocation and rebalancing, look-through concentration, RD maturity, calendar, monthly plan.
 - **CSV and price parsing:** both the old 6-column and new 8-column AMFI layouts, and Google Finance quote pages (exact symbol only, BSE codes, `M&M`).
+- **Money:** monthly totals, budgets, payday timing (weekends), safe-to-spend, savings streak, bank-statement parsing and categorisation, posting entries to account balances, duplicate-safe statement import.
 - **Storage:** sample data, backup round-trip and corruption checks, encryption, import undo.
+- **Price API:** daily NAV caching and stale fallback, truncated-download rejection, quote fallback, JWT verification (expired, wrong audience, forged), CORS allow-list, rate limiting.
+- **Database:** the real migration run on in-process Postgres: row-level security between users, anonymous lockout, server-assigned sync cursor, tombstones, account deletion.
+- **Sync:** two simulated devices through a fake cloud: creates/edits/deletes, composite keys, conflicts, no echo, sample data excluded, bulk ops and `clear()`, paging, account ownership of a device, and the exact PostgREST requests the Supabase adapter sends.
 
 ## Roadmap
 
 - CAS (CAMS/KFintech) PDF import
 - Historical NAV backfill for SIPs entered without a NAV
-- Optional sync between devices through an encrypted file in a folder you choose
+- End-to-end encrypted cloud storage (today the cloud copy is protected by login and row-level security but readable by the database operator)
+- Live sync push (today other devices pick up changes within about a minute)
+- Account Aggregator bank feeds (needs a licensed provider) so salary can be detected automatically

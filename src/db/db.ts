@@ -37,6 +37,24 @@ export async function undoImport(batchId: string): Promise<number> {
   });
 }
 
+/** A local change waiting to be pushed to the cloud. Keyed so repeated edits coalesce. */
+export interface OutboxEntry {
+  key: string; // `${collection}|${id}`
+  collection: string;
+  id: string;
+  /** Changes on every enqueue, so a push can tell whether the record moved while it was in flight. */
+  v: string;
+}
+
+export interface SyncMeta {
+  id: "meta";
+  /** The cloud account this device's data belongs to. */
+  userId?: string;
+  /** Highest server sequence number applied locally. */
+  cursor: number;
+  lastSyncedAt?: string;
+}
+
 /** One per month once salary arrives: the payday checklist state. */
 export interface PaydayRecord {
   month: string; // YYYY-MM
@@ -56,6 +74,8 @@ export class KaasuDB extends Dexie {
   imports!: Table<ImportBatch, string>;
   cash!: Table<CashEntry, string>;
   paydays!: Table<PaydayRecord, string>;
+  outbox!: Table<OutboxEntry, string>;
+  syncMeta!: Table<SyncMeta, string>;
 
   constructor(name = "kaasu") {
     super(name);
@@ -73,6 +93,11 @@ export class KaasuDB extends Dexie {
     this.version(2).stores({
       cash: "id, date, kind, category, accountId, importBatchId, fingerprint",
       paydays: "month",
+    });
+    // v3: cloud sync bookkeeping (local only; never synced or backed up).
+    this.version(3).stores({
+      outbox: "key",
+      syncMeta: "id",
     });
   }
 }

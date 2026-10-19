@@ -71,3 +71,17 @@ describe("AMFI NAVAll parser", () => {
     expect(searchSchemes(s, "90001").map((x) => x.code)).toEqual(["900010"]);
   });
 });
+
+describe("NavIndex (raw-text lookups for the Worker)", () => {
+  it("returns exactly what the full parser returns, for lookups and searches", async () => {
+    const { NavIndex } = await import("./amfi");
+    const idx = new NavIndex(SAMPLE);
+    const all = parseNavAll(SAMPLE);
+    for (const s of all) expect(idx.get(s.code)).toEqual(s);
+    expect(idx.get("123")).toBeNull();
+    expect(idx.get("900003")).toBeNull(); // N.A. NAV
+    expect(idx.search("example flexi")).toEqual(searchSchemes(all, "example flexi"));
+    expect(idx.search("90001").map((x) => x.code)).toEqual(["900010"]);
+    expect(idx.search("nothing like this")).toEqual([]);
+  });
+});

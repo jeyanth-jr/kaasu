@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { db, nowISO, requestPersistence, saveSettings } from "../db/db";
 import { backupFileName, clearAll, createBackup, parseBackup, restoreBackup } from "../db/backup";
@@ -12,6 +12,9 @@ import { useData } from "../ui/data";
 import { CLASS_LABEL } from "../ui/derived";
 import { IconDownload, IconUpload } from "../ui/icons";
 import { ImportCsv } from "../ui/ImportCsv";
+import { syncConfigured } from "../sync/config";
+
+const SyncPanel = lazy(() => import("../sync/SyncPanel").then((m) => ({ default: m.SyncPanel })));
 import { MoneyInput, NumberInput } from "../ui/inputs";
 
 function Section({ id, title, children, sub }: { id: string; title: string; sub?: ReactNode; children: ReactNode }) {
@@ -39,6 +42,14 @@ export function SettingsPage() {
     <>
       <PageHeader title="Settings" sub="Everything is stored in this browser only." />
       <div className="flex flex-col gap-4">
+        {syncConfigured && (
+          <Section id="account" title="Account & sync" sub="Back up to the cloud and keep your phone and laptop in step.">
+            <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+              <SyncPanel />
+            </Suspense>
+          </Section>
+        )}
+
         <Section id="profile" title="You">
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Monthly expenses" hint="For the emergency-fund meter">

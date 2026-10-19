@@ -10,3 +10,6 @@ dist/
 !src/**/fixtures/*.csv
 kaasu-backup-*.json
 *.pdf
+
+!.env.example
+.wrangler/
