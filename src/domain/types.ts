@@ -255,6 +255,12 @@ export interface Settings {
   salary?: { amount: Paise; day: number; accountId?: string; employer?: string };
   /** Monthly spending budget per category id. */
   categoryBudgets: Record<string, Paise>;
+  /** Monthly savings target. Unset = your SIP/RD/chit plans, else 20% of salary. */
+  savingsGoal?: Paise;
+  /** Milestones already celebrated (kept in settings so every device agrees and none repeats). */
+  wins: { key: string; at: string }[];
+  /** Confetti, toasts and haptics on savings milestones. */
+  celebrations: boolean;
   lastBackupAt?: string;
   privacyMode: boolean;
   sampleLoaded?: boolean;
@@ -295,6 +301,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tax: DEFAULT_TAX,
   quoteSource: "google",
   categoryBudgets: {},
+  wins: [],
+  celebrations: true,
   goldPerGramSource: "manual",
   privacyMode: false,
 };

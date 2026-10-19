@@ -8,6 +8,7 @@ import { formatCompact, formatINR, formatPct } from "../domain/money";
 import { Badge, Button, Card, EmptyState, Field, IconTile, Meter, Money, PageHeader, Select, Sheet, cx } from "../ui/components";
 import { useData } from "../ui/data";
 import { CategoryIcon } from "../ui/categoryIcons";
+import { SavingsGoalCard } from "../ui/SavingsGoal";
 import { IconBanknote, IconCalendarClock, IconCheckCircle, IconChevron, IconFlame, IconParty, IconPlus, IconTarget, IconUpload, IconWallet } from "../ui/icons";
 import { MoneyInput, NumberInput } from "../ui/inputs";
 import { useCommitments } from "../ui/money";
@@ -136,6 +137,8 @@ export function MoneyPage() {
               <span>savings rate {summary.savingsRate === null ? "—" : formatPct(summary.savingsRate * 100, { decimals: 0 })}</span>
             </div>
           </motion.section>
+
+          <SavingsGoalCard />
 
           <div className="grid gap-4 lg:grid-cols-5">
             <Card

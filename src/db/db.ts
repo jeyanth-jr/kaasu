@@ -117,6 +117,8 @@ export function mergeSettings(s: Partial<Settings> | undefined): Settings {
     tax: { ...DEFAULT_SETTINGS.tax, ...(s?.tax ?? {}) },
     bands: s?.bands && s.bands.length > 0 ? s.bands : DEFAULT_SETTINGS.bands,
     categoryBudgets: { ...(s?.categoryBudgets ?? {}) },
+    wins: Array.isArray(s?.wins) ? s.wins : [],
+    celebrations: s?.celebrations !== false,
     id: "settings",
   };
 }

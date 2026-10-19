@@ -14,6 +14,7 @@ import { PaydayBanner, SalarySetupSheet } from "./Money";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
 import { CategoryIcon } from "../ui/categoryIcons";
+import { SavingsGoalCard } from "../ui/SavingsGoal";
 import { IconAlert, IconChevron, IconHand, IconRocket, IconWallet } from "../ui/icons";
 
 function greeting(): string {
@@ -132,6 +133,8 @@ export function DashboardPage() {
           </div>
         )}
       </motion.section>
+
+      <SavingsGoalCard />
 
       <MoneySnapshot />
 

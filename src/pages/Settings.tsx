@@ -11,6 +11,8 @@ import { Badge, Button, Callout, Card, Field, Input, PageHeader, Select, Toggle 
 import { useData } from "../ui/data";
 import { CLASS_LABEL } from "../ui/derived";
 import { IconDownload, IconUpload } from "../ui/icons";
+import { describeKey } from "../domain/savings";
+import { celebrate } from "../ui/celebrate";
 import { ImportCsv } from "../ui/ImportCsv";
 import { syncConfigured } from "../sync/config";
 
@@ -138,6 +140,21 @@ export function SettingsPage() {
           <SampleSection hasSample={instruments.some((i) => i.sample)} />
         </Section>
 
+        <Section id="celebrations" title="Celebrations" sub="Confetti, a toast and a buzz when you hit a savings milestone: 25/50/75/100% of your monthly goal, streaks, net-worth levels and emergency-fund runway.">
+          <Toggle checked={settings.celebrations} onChange={(v) => set({ celebrations: v })} label="Celebrate my wins" hint="Respects your device's reduced-motion setting" />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => previewWin("goal:preview:25")}>
+              Small
+            </Button>
+            <Button size="sm" onClick={() => previewWin("goal:preview:75")}>
+              Medium
+            </Button>
+            <Button size="sm" onClick={() => previewWin("goal:preview:100")}>
+              Big
+            </Button>
+          </div>
+        </Section>
+
         <Section id="display" title="Display">
           <Toggle checked={settings.privacyMode} onChange={(v) => set({ privacyMode: v })} label="Hide amounts" hint="Blurs every rupee figure — handy in public. Toggle with the eye button too." />
         </Section>
@@ -150,6 +167,11 @@ export function SettingsPage() {
       </div>
     </>
   );
+}
+
+function previewWin(key: string): void {
+  const w = describeKey(key);
+  if (w) celebrate(w);
 }
 
 function BandsEditor({ bands, onChange }: { bands: AllocationBand[]; onChange: (b: AllocationBand[]) => void }) {

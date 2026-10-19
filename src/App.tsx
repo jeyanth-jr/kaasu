@@ -6,6 +6,8 @@ import { paydayStatus, type EntryKind } from "./domain/cashflow";
 import { daysBetween, todayISO } from "./domain/dates";
 import { refreshPrices, type RefreshReport } from "./prices/client";
 import { AddTransactionSheet } from "./ui/AddTransaction";
+import { CelebrationHost } from "./ui/celebrate";
+import { useSavingsTracker } from "./ui/useSavings";
 import { Button, Sheet, cx } from "./ui/components";
 import { DataProvider, useData } from "./ui/data";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
@@ -137,6 +139,7 @@ function Logo() {
 function Shell({ children }: { children: ReactNode }) {
   const { settings, instruments, ready } = useData();
   const { openChooser } = useAdd();
+  useSavingsTracker();
   const [theme, setTheme] = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [report, setReport] = useState<RefreshReport | null>(null);
@@ -373,6 +376,7 @@ export function App() {
               <Route path="*" element={<DashboardPage />} />
             </Routes>
           </Shell>
+          <CelebrationHost />
           <AddChooser open={chooser} onClose={() => setChooser(false)} />
           <AddTransactionSheet open={add.open} instrumentId={add.instrumentId} txnId={add.txnId} onClose={() => setAdd({ open: false })} />
           <EntrySheet open={money !== null} kind={money ?? "expense"} onClose={() => setMoney(null)} />
