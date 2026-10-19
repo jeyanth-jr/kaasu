@@ -189,12 +189,23 @@ export interface MonthlyPlan {
   lines: PlanLine[];
 }
 
+export type LoanKind = "home" | "car" | "bike" | "personal" | "education" | "gold" | "card" | "consumer" | "other";
+
 export interface Liability {
   id: string;
   name: string;
   emi: Paise;
   emiDay: number;
+  /** Date of the last EMI. */
   endDate: ISODate;
+  kind?: LoanKind;
+  /** Amount borrowed. With rate and start date it enables outstanding balance, interest and prepayment maths. */
+  principal?: Paise;
+  /** Annual interest rate in %, 0 for no-cost EMI. */
+  ratePct?: number;
+  /** Disbursal date; the first EMI falls one month later, on `emiDay`. */
+  startDate?: ISODate;
+  tenureMonths?: number;
   sample?: boolean;
 }
 

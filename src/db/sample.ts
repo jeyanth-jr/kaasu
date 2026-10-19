@@ -1,5 +1,6 @@
 import { addDays, addMonths, daysBetween, monthEnd, monthKey, todayISO, withDay } from "../domain/dates";
 import { toPaise } from "../domain/money";
+import { emiFor, firstEmiDate, lastInstalmentDate } from "../domain/obligations";
 import type {
   Instrument,
   InstrumentDetails,
@@ -112,14 +113,14 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
   const sipFunds = [
     { key: "ppfas", name: "Parag Parikh Flexi Cap Fund – Direct Growth", code: "122639", seg: "flexi" as const, p0: 52, drift: 0.16, sip: 10000, day: 5, months: 30 },
     { key: "uti50", name: "UTI Nifty 50 Index Fund – Direct Growth", code: "120716", seg: "index" as const, p0: 128, drift: 0.12, sip: 5000, day: 10, months: 24, index: "NIFTY 50" },
-    { key: "mid", name: "Motilal Oswal Midcap Fund – Direct Growth", code: "127042", seg: "mid" as const, p0: 64, drift: 0.2, sip: 3000, day: 15, months: 14 },
+    { key: "mid", name: "Motilal Oswal Midcap Fund – Direct Growth", code: "127042", seg: "mid" as const, p0: 64, drift: 0.2, sip: 3000, day: 15, months: 14, sipMonths: 24 },
   ];
   for (const [i, f] of sipFunds.entries()) {
     const sipStart = withDay(addMonths(asOf, -f.months), f.day);
     const iid = add(
       f.key,
       f.name,
-      { kind: "mf", amfiCode: f.code, category: "Equity", sip: { amount: toPaise(f.sip), day: f.day, start: sipStart } },
+      { kind: "mf", amfiCode: f.code, category: "Equity", sip: { amount: toPaise(f.sip), day: f.day, start: sipStart, end: (f as { sipMonths?: number }).sipMonths ? lastInstalmentDate(sipStart, f.day, (f as { sipMonths: number }).sipMonths) : undefined } },
       { segment: f.seg, trackingIndex: f.index },
     );
     const w = walk(11 + i, start, f.p0, f.drift, 0.045, 32);
@@ -273,8 +274,16 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     },
   ];
 
+  // Loans with real principal and rate, so balances, interest and prepayment maths have something to show.
+  const bikeStart = addMonths(asOf, -19);
+  const bikeEmi = emiFor(toPaise(100000), 12, 24);
+  const laptopStart = addMonths(asOf, -2);
+  const homeStart = addMonths(asOf, -26);
+  const homeEmi = emiFor(toPaise(2500000), 8.6, 240);
   const liabilities: Liability[] = [
-    { id: id("loan"), name: "Two-wheeler loan", emi: toPaise(3500), emiDay: 5, endDate: withDay(addMonths(asOf, 5), 5), sample: true },
+    { id: id("loan"), name: "Two-wheeler loan", kind: "bike", emi: bikeEmi, emiDay: 5, principal: toPaise(100000), ratePct: 12, startDate: bikeStart, tenureMonths: 24, endDate: withDay(addMonths(firstEmiDate(bikeStart, 5), 23), 5), sample: true },
+    { id: id("laptop"), name: "Laptop no-cost EMI", kind: "consumer", emi: toPaise(10000), emiDay: 12, principal: toPaise(60000), ratePct: 0, startDate: laptopStart, tenureMonths: 6, endDate: withDay(addMonths(firstEmiDate(laptopStart, 12), 5), 12), sample: true },
+    { id: id("home"), name: "Home loan", kind: "home", emi: homeEmi, emiDay: 3, principal: toPaise(2500000), ratePct: 8.6, startDate: homeStart, tenureMonths: 240, endDate: withDay(addMonths(firstEmiDate(homeStart, 3), 239), 3), sample: true },
   ];
 
   // --- Day-to-day money: three months of salary and spending ---------------

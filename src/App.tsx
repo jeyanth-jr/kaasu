@@ -21,6 +21,7 @@ import {
   IconPie,
   IconPlus,
   IconReceipt,
+  IconRepeat,
   IconRefresh,
   IconSettings,
   IconSparkles,
@@ -34,6 +35,7 @@ import { useSyncActive } from "./sync/state";
 // Pages load on demand so the first screen arrives quickly on a phone.
 const DashboardPage = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.DashboardPage })));
 const MoneyPage = lazy(() => import("./pages/Money").then((m) => ({ default: m.MoneyPage })));
+const PlansPage = lazy(() => import("./pages/Plans").then((m) => ({ default: m.PlansPage })));
 const HoldingsPage = lazy(() => import("./pages/Holdings").then((m) => ({ default: m.HoldingsPage })));
 const HoldingDetailPage = lazy(() => import("./pages/HoldingDetail").then((m) => ({ default: m.HoldingDetailPage })));
 const TransactionsPage = lazy(() => import("./pages/Transactions").then((m) => ({ default: m.TransactionsPage })));
@@ -88,6 +90,7 @@ function useTheme(): [Theme, (t: Theme) => void] {
 const EVERYDAY = [
   { to: "/", label: "Home", icon: IconHome },
   { to: "/money", label: "Money", icon: IconWallet },
+  { to: "/plans", label: "Plans & debt", icon: IconRepeat },
 ];
 const INVEST = [
   { to: "/holdings", label: "Holdings", icon: IconLayers },
@@ -96,7 +99,7 @@ const INVEST = [
   { to: "/tax", label: "Tax", icon: IconReceipt },
   { to: "/calendar", label: "Calendar & plan", icon: IconCalendar },
 ];
-const MORE = [...INVEST.slice(1), { to: "/settings", label: "Settings", icon: IconSettings }];
+const MORE = [{ to: "/plans", label: "Plans & debt", icon: IconRepeat }, ...INVEST.slice(1), { to: "/settings", label: "Settings", icon: IconSettings }];
 
 function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof IconHome }) {
   return (
@@ -355,6 +358,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/money" element={<MoneyPage />} />
+              <Route path="/plans" element={<PlansPage />} />
               <Route path="/holdings" element={<HoldingsPage />} />
               <Route path="/holdings/:id" element={<HoldingDetailPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />

@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type Inp
 import { formatDate } from "../domain/dates";
 import { formatCompact, formatINR, formatPct, formatPrice } from "../domain/money";
 import type { Paise, PricePoint } from "../domain/types";
-import { IconArrowDown, IconArrowUp, IconX } from "./icons";
+import { IconArrowDown, IconArrowUp, IconSparkles, IconX } from "./icons";
 
 export function cx(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(" ");
@@ -152,11 +152,11 @@ export function Badge({ children, tone = "neutral", className }: { children: Rea
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
-export function EmptyState({ title, children, action, emoji = "🪴" }: { title: string; children?: ReactNode; action?: ReactNode; emoji?: string }) {
+export function EmptyState({ title, children, action, emoji, icon }: { title: string; children?: ReactNode; action?: ReactNode; emoji?: string; icon?: ReactNode }) {
   return (
     <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-line bg-surface/60 px-6 py-12 text-center">
-      <motion.div initial={{ scale: 0.6, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }} className="mb-3 text-5xl">
-        {emoji}
+      <motion.div initial={{ scale: 0.6, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }} className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-accent-soft text-4xl">
+        {icon ?? emoji ?? <IconSparkles size={30} className="text-accent" />}
       </motion.div>
       <h3 className="display text-2xl font-bold">{title}</h3>
       {children && <div className="mt-2 max-w-md text-sm text-muted">{children}</div>}
