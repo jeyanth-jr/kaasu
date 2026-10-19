@@ -1,60 +1,70 @@
 @import "tailwindcss";
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Palette: warm paper, deep ink-teal, brass for gold. Gains and losses
- * always come with a sign or arrow, so colour is never the only signal.
+ * Kaasu palette: electric violet + lime pop on lavender (light) or ink (dark).
+ * Gains and losses always carry a sign or arrow, so colour is never the only signal.
  */
 :root {
-  --paper: #f4f1ea;
-  --surface: #fbfaf6;
-  --sunken: #ebe6db;
-  --ink: #1c2826;
-  --muted: #5d6965;
-  --faint: #8b948f;
-  --line: #ddd6c8;
-  --accent: #2d6a5e;
-  --accent-ink: #f4f1ea;
-  --accent-soft: #d8e6df;
-  --gain: #1d7a4c;
-  --loss: #b3412c;
-  --warn: #9a6a12;
-  --warn-soft: #f3e6c8;
-  --brass: #a8802d;
-  --c-equity: #2d6a5e;
-  --c-debt: #5b7fa6;
-  --c-gold: #c09a3e;
-  --c-cash: #8a9a8f;
-  --c-other: #a87a8f;
+  --paper: #f6f4ff;
+  --surface: #ffffff;
+  --sunken: #efebfd;
+  --ink: #15122b;
+  --muted: #5d5878;
+  --faint: #8f8aad;
+  --line: #e3ddf6;
+  --accent: #6a46ff;
+  --accent-2: #d946ef;
+  --accent-ink: #ffffff;
+  --accent-soft: #ebe5ff;
+  --lime: #c4f135;
+  --lime-ink: #1b2400;
+  --gain: #0b8f62;
+  --gain-soft: #dcf7ec;
+  --loss: #e11d48;
+  --loss-soft: #ffe4ea;
+  --warn: #b45309;
+  --warn-soft: #fff1d6;
+  --brass: #e7a400;
+  --c-equity: #6a46ff;
+  --c-debt: #0ea5e9;
+  --c-gold: #f5b301;
+  --c-cash: #10b981;
+  --c-other: #ec4899;
+  --shadow: 0 1px 2px rgb(21 18 43 / 0.04), 0 8px 24px -12px rgb(76 50 200 / 0.18);
   color-scheme: light;
 }
 
 .dark {
-  --paper: #111615;
-  --surface: #182020;
-  --sunken: #0d1211;
-  --ink: #e6e2d8;
-  --muted: #9ea8a3;
-  --faint: #6f7974;
-  --line: #2a3533;
-  --accent: #6fb7a3;
-  --accent-ink: #0f1514;
-  --accent-soft: #1f3631;
-  --gain: #5cc48f;
-  --loss: #ef8a72;
-  --warn: #e0b75a;
-  --warn-soft: #3a3020;
-  --brass: #d6b25e;
-  --c-equity: #6fb7a3;
-  --c-debt: #86a8cf;
-  --c-gold: #d6b25e;
-  --c-cash: #9aaba0;
-  --c-other: #c79ab0;
+  --paper: #0c0a18;
+  --surface: #15122a;
+  --sunken: #0f0c1f;
+  --ink: #f3f1ff;
+  --muted: #a8a3c6;
+  --faint: #6f6a92;
+  --line: #2a2549;
+  --accent: #8d74ff;
+  --accent-2: #e879f9;
+  --accent-ink: #0c0a18;
+  --accent-soft: #241d4f;
+  --lime: #d4ff4f;
+  --lime-ink: #182000;
+  --gain: #34d399;
+  --gain-soft: #0e2f25;
+  --loss: #fb7185;
+  --loss-soft: #3a1420;
+  --warn: #fbbf24;
+  --warn-soft: #33270c;
+  --brass: #fbbf24;
+  --c-equity: #8d74ff;
+  --c-debt: #38bdf8;
+  --c-gold: #fbbf24;
+  --c-cash: #34d399;
+  --c-other: #f472b6;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -67,15 +77,21 @@
   --color-faint: var(--faint);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-lime: var(--lime);
+  --color-lime-ink: var(--lime-ink);
   --color-gain: var(--gain);
+  --color-gain-soft: var(--gain-soft);
   --color-loss: var(--loss);
+  --color-loss-soft: var(--loss-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-brass: var(--brass);
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces Variable", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Plus Jakarta Sans Variable", ui-sans-serif, sans-serif;
+  --shadow-card: var(--shadow);
 }
 
 html,
@@ -89,6 +105,10 @@ body {
 
 body {
   min-height: 100dvh;
+  background-image:
+    radial-gradient(60rem 30rem at 110% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(40rem 24rem at -10% 0%, color-mix(in oklab, var(--accent-2) 8%, transparent), transparent 60%);
+  background-attachment: fixed;
 }
 
 .num {
@@ -98,13 +118,27 @@ body {
 
 .display {
   font-family: var(--font-display);
-  font-optical-sizing: auto;
-  font-variation-settings: "SOFT" 50, "WONK" 0;
-  letter-spacing: -0.01em;
+  font-variation-settings: "wdth" 90;
+  letter-spacing: -0.025em;
+}
+
+/* Signature gradient for hero surfaces */
+.bg-hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in oklab, var(--accent-2) 70%, transparent), transparent 55%),
+    linear-gradient(135deg, var(--accent) 0%, color-mix(in oklab, var(--accent) 70%, #1b0f5c) 100%);
+  color: #fff;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .privacy .money {
-  filter: blur(7px);
+  filter: blur(8px);
   user-select: none;
 }
 
@@ -115,10 +149,9 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
-/* Thin, quiet scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -128,6 +161,13 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

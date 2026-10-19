@@ -55,6 +55,10 @@ const backupSchema = z.object({
     lookThrough: z.array(z.object({ instrumentId: z.string(), month: z.string(), holdings: z.array(z.any()) }).passthrough()).default([]),
     plans: z.array(z.object({ month: z.string(), lines: z.array(z.any()) }).passthrough()).default([]),
     liabilities: z.array(z.object({ id: z.string() }).passthrough()).default([]),
+    cash: z
+      .array(z.object({ id: z.string().min(1), date: isoDate, kind: z.enum(["income", "expense"]), amount: paise.nonnegative(), category: z.string() }).passthrough())
+      .default([]),
+    paydays: z.array(z.object({ month: z.string(), done: z.record(z.boolean()) }).passthrough()).default([]),
     settings: z.object({}).passthrough().optional(),
   }),
 });
@@ -62,20 +66,22 @@ const backupSchema = z.object({
 export type Backup = z.infer<typeof backupSchema>;
 
 export async function createBackup(): Promise<Backup> {
-  const [instruments, txns, prices, lookThrough, plans, liabilities, settings] = await Promise.all([
+  const [instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, settings] = await Promise.all([
     db.instruments.toArray(),
     db.txns.toArray(),
     db.prices.toArray(),
     db.lookThrough.toArray(),
     db.plans.toArray(),
     db.liabilities.toArray(),
+    db.cash.toArray(),
+    db.paydays.toArray(),
     db.settings.get("settings"),
   ]);
   return {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: nowISO(),
-    data: { instruments, txns, prices, lookThrough, plans, liabilities, settings: settings ?? undefined },
+    data: { instruments, txns, prices, lookThrough, plans, liabilities, cash, paydays, settings: settings ?? undefined },
   } as unknown as Backup;
 }
 
@@ -110,7 +116,7 @@ export function parseBackup(text: string): { ok: true; backup: Backup } | { ok: 
 export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
   const d = backup.data;
   try {
-    await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.settings, db.imports], async () => {
+    await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.settings, db.imports, db.cash, db.paydays], async () => {
       await Promise.all([
         db.instruments.clear(),
         db.txns.clear(),
@@ -119,6 +125,8 @@ export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
         db.plans.clear(),
         db.liabilities.clear(),
         db.imports.clear(),
+        db.cash.clear(),
+        db.paydays.clear(),
       ]);
       await db.instruments.bulkPut(d.instruments as never[]);
       await db.txns.bulkPut(d.txns as never[]);
@@ -126,6 +134,8 @@ export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
       await db.lookThrough.bulkPut(d.lookThrough as never[]);
       await db.plans.bulkPut(d.plans as never[]);
       await db.liabilities.bulkPut(d.liabilities as never[]);
+      await db.cash.bulkPut(d.cash as never[]);
+      await db.paydays.bulkPut(d.paydays as never[]);
       await db.settings.put(mergeSettings(d.settings as never));
     });
   } catch (e) {
@@ -137,13 +147,16 @@ export async function restoreBackup(backup: Backup): Promise<RestoreResult> {
       instruments: d.instruments.length,
       transactions: d.txns.length,
       prices: d.prices.length,
+      cash: d.cash.length,
     },
   };
 }
 
 export async function clearAll(): Promise<void> {
-  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.imports], async () => {
+  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.plans, db.liabilities, db.imports, db.cash, db.paydays], async () => {
     await Promise.all([
+      db.cash.clear(),
+      db.paydays.clear(),
       db.instruments.clear(),
       db.txns.clear(),
       db.prices.clear(),

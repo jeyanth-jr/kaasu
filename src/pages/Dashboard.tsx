@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -6,31 +7,42 @@ import { clearSampleData, loadSampleData } from "../db/sample";
 import { daysBetween, formatDate, formatMonth, monthKey } from "../domain/dates";
 import { formatCompact, formatINR, formatPct } from "../domain/money";
 import { netWorthSeries } from "../domain/portfolio";
-import { Badge, Button, Callout, Card, Change, EmptyState, Meter, Money, PageHeader, PctChange, Stat, Tabs, cx } from "../ui/components";
+import { monthSummary, paydayStatus, safeToSpend } from "../domain/cashflow";
+import { AnimatedMoney, Badge, Button, Callout, Card, EmptyState, Meter, Money, PageHeader, Tabs, cx } from "../ui/components";
+import { useCommitments } from "../ui/money";
+import { PaydayBanner, SalarySetupSheet } from "./Money";
 import { useData } from "../ui/data";
 import { CLASS_COLOR, CLASS_LABEL, useAllocation, useEmergency, useEquity, useUpcoming } from "../ui/derived";
-import { IconAlert, IconChevron } from "../ui/icons";
+import { IconAlert, IconChevron, IconWallet } from "../ui/icons";
+
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
 export function DashboardPage() {
   const data = useData();
-  const { portfolio: pf, settings, instruments, ready } = data;
-  const { openAdd } = useAdd();
+  const { portfolio: pf, settings, instruments, ready, cash, asOf } = data;
+  const { openAdd, openPayday, openMoney } = useAdd();
   const [busy, setBusy] = useState(false);
+  const [setup, setSetup] = useState(false);
   const hasSample = instruments.some((i) => i.sample);
 
-  if (!ready) return <div className="py-20 text-center text-muted">Opening your ledger…</div>;
+  if (!ready) return <div className="py-20 text-center text-muted">Counting your kaasu…</div>;
 
-  if (instruments.length === 0) {
+  if (instruments.length === 0 && cash.length === 0) {
     return (
       <div className="mx-auto max-w-2xl pt-6">
-        <PageHeader title="Welcome to Kaasu" sub="A private, local-first tracker for everything you own." />
+        <PageHeader title="Hey there" emoji="👋" sub="Kaasu tracks your salary, spending and every investment you own, privately." />
         <EmptyState
-          title="Your ledger is empty"
+          emoji="🚀"
+          title="Let's get your money map going"
           action={
             <>
-              <Button variant="primary" onClick={() => openAdd()}>
-                Add your first transaction
+              <Button variant="primary" onClick={() => openMoney("expense")}>
+                Log a spend
               </Button>
+              <Button onClick={() => openAdd()}>Add an investment</Button>
               <Link to="/settings#import">
                 <Button>Import a CSV</Button>
               </Link>
@@ -43,14 +55,13 @@ export function DashboardPage() {
                   setBusy(false);
                 }}
               >
-                {busy ? "Loading…" : "Load sample data"}
+                {busy ? "Loading…" : "Try with sample data"}
               </Button>
             </>
           }
         >
-          Every buy, SIP, RD instalment and interest payout is a dated transaction. Holdings, average cost, P/L, XIRR and tax lots are worked out from them.
-          <br />
-          <span className="mt-2 block text-xs text-faint">Sample data is fictional, clearly marked, and can be cleared in one click. Nothing leaves this device.</span>
+          Every buy, SIP, salary credit and chai is a dated entry. Net worth, XIRR, budgets and tax lots are all worked out from them.
+          <span className="mt-2 block text-xs text-faint">Sample data is fictional, clearly marked, and clears in one tap.</span>
         </EmptyState>
       </div>
     );
@@ -58,21 +69,28 @@ export function DashboardPage() {
 
   const gainPct = pf.invested > 0 ? (pf.unrealized / pf.invested) * 100 : null;
   const dayPct = pf.dayChangeBase > 0 ? (pf.dayChange / pf.dayChangeBase) * 100 : null;
+  const status = paydayStatus(settings.salary, cash, asOf);
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="sr-only">Dashboard</h1>
+      <h1 className="sr-only">Home</h1>
+      <div>
+        <div className="text-sm font-semibold text-muted">{formatDate(asOf)}</div>
+        <div className="display text-3xl font-extrabold sm:text-4xl">
+          {greeting()}{" "}
+          <motion.span className="inline-block origin-[70%_70%]" animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ duration: 1.2, delay: 0.3 }}>
+            👋
+          </motion.span>
+        </div>
+      </div>
+
       {hasSample && (
-        <Callout
-          tone="warn"
-          icon={<Badge tone="warn">SAMPLE</Badge>}
-          title="You're looking at sample data"
-        >
-          <span>All holdings marked sample are fictional. </span>
+        <Callout tone="warn" icon={<Badge tone="warn">SAMPLE</Badge>} title="You're looking at sample data">
+          <span>Everything marked sample is made up. </span>
           <button
-            className="font-medium text-ink underline underline-offset-2"
+            className="font-semibold text-ink underline underline-offset-2"
             onClick={async () => {
-              if (confirm("Remove all sample holdings and transactions? Your own entries stay.")) await clearSampleData();
+              if (confirm("Remove all sample holdings and entries? Your own data stays.")) await clearSampleData();
             }}
           >
             Clear sample data
@@ -80,29 +98,41 @@ export function DashboardPage() {
         </Callout>
       )}
 
+      {(status.state === "due" || status.state === "not-set") && <PaydayBanner status={status} onOpen={openPayday} onSetup={() => setSetup(true)} />}
+
       {/* Hero */}
-      <section className="rounded-3xl border border-line bg-surface p-5 sm:p-7">
-        <div className="text-sm text-muted">Net worth · {formatDate(data.asOf)}</div>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <span className="display money num text-4xl font-medium sm:text-5xl">{formatINR(pf.netWorth)}</span>
-          <span className="text-base text-muted money num">{formatCompact(pf.netWorth)}</span>
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        className="relative overflow-hidden rounded-[2rem] bg-hero p-5 shadow-card sm:p-7"
+      >
+        <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-lime/30 blur-3xl" />
+        <div className="relative">
+          <div className="text-sm font-semibold text-white/80">Your net worth</div>
+          <AnimatedMoney p={pf.netWorth} className="display mt-1 block text-[2.6rem] leading-none font-extrabold sm:text-6xl" />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {pf.dayChangeBase > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-sm font-semibold backdrop-blur">
+                {pf.dayChange >= 0 ? "▲" : "▼"} <span className="money">{formatINR(Math.abs(pf.dayChange))}</span> today ({formatPct(dayPct, { sign: true })})
+              </span>
+            )}
+            {pf.xirr !== null && <span className="inline-flex items-center gap-1 rounded-full bg-lime px-3 py-1 text-sm font-bold text-lime-ink">XIRR {formatPct(pf.xirr * 100, { sign: true })}</span>}
+          </div>
+        </div>
+        <div className="relative mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <HeroStat label="Invested" value={formatINR(pf.invested)} />
+          <HeroStat label="Gain" value={`${pf.unrealized >= 0 ? "+" : "−"}${formatINR(Math.abs(pf.unrealized))}`} sub={gainPct === null ? undefined : formatPct(gainPct, { sign: true })} />
+          <HeroStat label="In lakhs" value={formatCompact(pf.netWorth)} className="hidden sm:block" />
         </div>
         {!settings.includeCommitments && pf.commitmentsPaid > 0 && (
-          <div className="mt-1 text-xs text-faint">
+          <div className="relative mt-3 text-xs text-white/70">
             Excludes <Money p={pf.commitmentsPaid} /> paid into commitments outside the portfolio
           </div>
         )}
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Stat label="Invested (cost)" value={<Money p={pf.invested} />} />
-          <Stat label="Unrealised gain" value={<Change p={pf.unrealized} hideArrow />} sub={<PctChange pct={gainPct} />} />
-          <Stat
-            label="Today"
-            value={pf.dayChangeBase > 0 ? <Change p={pf.dayChange} hideArrow /> : <span className="text-faint">—</span>}
-            sub={pf.dayChangeBase > 0 ? <PctChange pct={dayPct} /> : "needs two price dates"}
-          />
-          <Stat label="XIRR" value={<PctChange pct={pf.xirr === null ? null : pf.xirr * 100} />} sub="excl. cash & commitments" />
-        </div>
-      </section>
+      </motion.section>
+
+      <MoneySnapshot />
 
       <NetWorthChart />
 
@@ -115,7 +145,53 @@ export function DashboardPage() {
         <UpcomingCard />
         <AlertsCard />
       </div>
+      {setup && <SalarySetupSheet onClose={() => setSetup(false)} />}
     </div>
+  );
+}
+
+function HeroStat({ label, value, sub, className }: { label: string; value: string; sub?: string; className?: string }) {
+  return (
+    <div className={cx("rounded-2xl px-3 py-2.5 text-white", className)} style={{ background: "rgb(255 255 255 / 0.12)" }}>
+      <div className="text-[11px] font-semibold text-white/75">{label}</div>
+      <div className="money text-base font-extrabold whitespace-nowrap num">{value}</div>
+      {sub && <div className="text-[11px] font-semibold text-white/80 num">{sub}</div>}
+    </div>
+  );
+}
+
+function MoneySnapshot() {
+  const { cash, settings, asOf } = useData();
+  const month = monthKey(asOf);
+  const summary = useMemo(() => monthSummary(cash, month), [cash, month]);
+  const commitments = useCommitments(month, summary.income || settings.salary?.amount || 0);
+  const sts = safeToSpend({ summary, salary: settings.salary, committed: commitments.reduce((s, c) => s + c.amount, 0), today: asOf });
+  if (cash.length === 0 && !settings.salary) return null;
+  const top = summary.byCategory.slice(0, 3);
+  return (
+    <Link to="/money" className="block">
+      <Card title="This month" icon={<IconWallet size={15} />} action={<span className="flex items-center text-xs font-semibold text-accent">Money <IconChevron size={14} /></span>}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="text-xs font-semibold text-muted">Safe to spend</div>
+            <div className={cx("display money text-3xl font-extrabold num", sts.left < 0 ? "text-loss" : "text-ink")}>{formatINR(sts.left)}</div>
+            {sts.daysLeft > 0 && (
+              <div className="text-xs text-muted">
+                ≈ <span className="money">{formatINR(sts.perDay)}</span>/day · {sts.daysLeft} days left
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {top.map((c) => (
+              <div key={c.category.id} className="flex items-center gap-2 rounded-2xl bg-sunken px-3 py-2">
+                <span className="text-lg">{c.category.emoji}</span>
+                <span className="money text-sm font-bold num">{formatCompact(c.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    </Link>
   );
 }
 

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import type { CashEntry } from "../domain/cashflow";
 import type {
   Instrument,
   Liability,
@@ -36,6 +37,14 @@ export async function undoImport(batchId: string): Promise<number> {
   });
 }
 
+/** One per month once salary arrives: the payday checklist state. */
+export interface PaydayRecord {
+  month: string; // YYYY-MM
+  salaryEntryId?: string;
+  done: Record<string, boolean>;
+  updatedAt: string;
+}
+
 export class KaasuDB extends Dexie {
   instruments!: Table<Instrument, string>;
   txns!: Table<Transaction, string>;
@@ -45,6 +54,8 @@ export class KaasuDB extends Dexie {
   liabilities!: Table<Liability, string>;
   settings!: Table<Settings, string>;
   imports!: Table<ImportBatch, string>;
+  cash!: Table<CashEntry, string>;
+  paydays!: Table<PaydayRecord, string>;
 
   constructor(name = "kaasu") {
     super(name);
@@ -57,6 +68,11 @@ export class KaasuDB extends Dexie {
       liabilities: "id",
       settings: "id",
       imports: "id, createdAt",
+    });
+    // v2: day-to-day money (income, spending, payday checklist).
+    this.version(2).stores({
+      cash: "id, date, kind, category, accountId, importBatchId, fingerprint",
+      paydays: "month",
     });
   }
 }
@@ -75,6 +91,7 @@ export function mergeSettings(s: Partial<Settings> | undefined): Settings {
     ...(s ?? {}),
     tax: { ...DEFAULT_SETTINGS.tax, ...(s?.tax ?? {}) },
     bands: s?.bands && s.bands.length > 0 ? s.bands : DEFAULT_SETTINGS.bands,
+    categoryBudgets: { ...(s?.categoryBudgets ?? {}) },
     id: "settings",
   };
 }

@@ -240,6 +240,10 @@ export interface Settings {
   goldPerGramSource: "manual" | "etf";
   goldEtfInstrumentId?: string;
   goldGramsPerEtfUnit?: number;
+  /** Expected in-hand salary, for the payday flow. */
+  salary?: { amount: Paise; day: number; accountId?: string; employer?: string };
+  /** Monthly spending budget per category id. */
+  categoryBudgets: Record<string, Paise>;
   lastBackupAt?: string;
   privacyMode: boolean;
   sampleLoaded?: boolean;
@@ -279,6 +283,7 @@ export const DEFAULT_SETTINGS: Settings = {
   monthlyBudget: 50_000_00,
   tax: DEFAULT_TAX,
   quoteSource: "google",
+  categoryBudgets: {},
   goldPerGramSource: "manual",
   privacyMode: false,
 };

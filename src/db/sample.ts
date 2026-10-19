@@ -11,6 +11,7 @@ import type {
   TxnType,
 } from "../domain/types";
 import { defaultsForKind } from "../domain/types";
+import type { CashEntry } from "../domain/cashflow";
 import { db, nowISO, saveSettings } from "./db";
 
 /**
@@ -276,18 +277,64 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     { id: id("loan"), name: "Two-wheeler loan", emi: toPaise(3500), emiDay: 5, endDate: withDay(addMonths(asOf, 5), 5), sample: true },
   ];
 
-  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities], async () => {
+  // --- Day-to-day money: three months of salary and spending ---------------
+  const cash: CashEntry[] = [];
+  const rnd = mulberry32(99);
+  const spend: [string, number, number, string[]][] = [
+    // category, times per month, typical amount, notes
+    ["rent", 1, 18000, ["Rent"]],
+    ["groceries", 5, 1400, ["Blinkit", "BigBasket", "Zepto"]],
+    ["food", 9, 420, ["Swiggy", "Zomato", "Chai break", "Biryani with team"]],
+    ["transport", 8, 180, ["Uber", "Rapido", "Metro card"]],
+    ["bills", 3, 700, ["Airtel postpaid", "BESCOM", "ACT Fibernet"]],
+    ["subscriptions", 2, 400, ["Spotify", "Netflix"]],
+    ["shopping", 2, 1800, ["Myntra", "Amazon"]],
+    ["fun", 2, 650, ["BookMyShow", "Bowling"]],
+    ["family", 1, 5000, ["Sent home"]],
+  ];
+  let cn = 0;
+  const cid = () => `sample-c${++cn}`;
+  for (let mBack = 2; mBack >= 0; mBack--) {
+    const mStart = withDay(addMonths(asOf, -mBack), 1);
+    const lastDay = mBack === 0 ? Number(asOf.slice(8)) : 28;
+    const payday = withDay(addMonths(asOf, -mBack), 1);
+    if (mBack > 0 || payday <= asOf) {
+      cash.push({ id: cid(), date: payday, kind: "income", amount: toPaise(85000), category: "salary", note: "Salary · Acme Tech", source: "sample", createdAt: created });
+    }
+    for (const [cat, times, typical, notes] of spend) {
+      for (let i = 0; i < times; i++) {
+        const day = Math.min(lastDay, 1 + Math.floor(rnd() * lastDay));
+        const date = withDay(mStart, day);
+        if (date > asOf) continue;
+        const amount = cat === "rent" || cat === "family" ? typical : Math.round(typical * (0.5 + rnd()));
+        cash.push({ id: cid(), date, kind: "expense", amount: toPaise(amount), category: cat, note: notes[Math.floor(rnd() * notes.length)], source: "sample", createdAt: created });
+      }
+    }
+  }
+
+  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash], async () => {
+    await db.cash.bulkPut(cash);
     await db.instruments.bulkPut(instruments);
     await db.txns.bulkPut(txns);
     await db.prices.bulkPut(prices);
     await db.lookThrough.bulkPut(lookThrough);
     await db.liabilities.bulkPut(liabilities);
   });
-  await saveSettings({ sampleLoaded: true });
+  const cur = await db.settings.get("settings");
+  await saveSettings({
+    sampleLoaded: true,
+    // Only fill payday/budgets if you haven't set your own.
+    salary: cur?.salary ?? { amount: toPaise(85000), day: 1, employer: "Acme Tech (sample)" },
+    categoryBudgets:
+      cur?.categoryBudgets && Object.keys(cur.categoryBudgets).length
+        ? cur.categoryBudgets
+        : { rent: toPaise(18000), groceries: toPaise(7000), food: toPaise(4000), transport: toPaise(2000), shopping: toPaise(3000), fun: toPaise(1500), subscriptions: toPaise(800), bills: toPaise(2500) },
+  });
 }
 
 export async function clearSampleData(): Promise<void> {
-  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities], async () => {
+  await db.transaction("rw", [db.instruments, db.txns, db.prices, db.lookThrough, db.liabilities, db.cash], async () => {
+    await db.cash.filter((c) => c.source === "sample").delete();
     const ids = (await db.instruments.toArray()).filter((i) => i.sample).map((i) => i.id);
     await db.txns.where("instrumentId").anyOf(ids).delete();
     await db.txns.filter((t) => t.source === "sample").delete();
@@ -297,7 +344,8 @@ export async function clearSampleData(): Promise<void> {
     const loans = (await db.liabilities.toArray()).filter((l) => l.sample).map((l) => l.id);
     await db.liabilities.bulkDelete(loans);
   });
-  await saveSettings({ sampleLoaded: false });
+  const cur = await db.settings.get("settings");
+  await saveSettings({ sampleLoaded: false, salary: cur?.salary?.employer?.includes("(sample)") ? undefined : cur?.salary });
 }
 
 function lastWeekday(d: ISODate): ISODate {
