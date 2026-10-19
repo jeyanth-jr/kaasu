@@ -1,4 +1,4 @@
-import { db, nowISO } from "../db/db";
+import { db, getSettings, nowISO } from "../db/db";
 import type { Instrument, PricePoint } from "../domain/types";
 
 /** Client for the local price proxy (server/index.ts), reached via /api. */
@@ -45,6 +45,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   }
   const points: PricePoint[] = [];
   const failed: RefreshReport["failed"] = [];
+  const fellBack: string[] = [];
   const fetchedAt = nowISO();
 
   const funds = all.filter((i) => i.details.kind === "mf" && i.details.amfiCode);
@@ -66,13 +67,16 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   if (listed.length) {
     try {
       const keys = listed.map((x) => `${x.s.exchange}:${x.s.symbol}`);
-      const r = await getJson<{ quotes: Record<string, { price: number; prevClose: number | null; date: string } | { error: string }> }>(
-        `/api/quote?symbols=${encodeURIComponent(keys.join(","))}`,
+      const { quoteSource } = await getSettings();
+      const r = await getJson<{ quotes: Record<string, { price: number; prevClose: number | null; date: string; provider: "google" | "yahoo" } | { error: string }> }>(
+        `/api/quote?source=${quoteSource}&symbols=${encodeURIComponent(keys.join(","))}`,
       );
       for (const [k, x] of keys.map((k, idx) => [k, listed[idx]!] as const)) {
         const q = r.quotes[k];
-        if (q && "price" in q) points.push({ instrumentId: x.i.id, date: q.date, price: q.price, prevClose: q.prevClose ?? undefined, source: "quote", fetchedAt });
-        else failed.push({ name: x.i.name, reason: q && "error" in q ? q.error : "no quote" });
+        if (q && "price" in q) {
+          points.push({ instrumentId: x.i.id, date: q.date, price: q.price, prevClose: q.prevClose ?? undefined, source: q.provider, fetchedAt });
+          if (q.provider !== quoteSource) fellBack.push(x.i.name);
+        } else failed.push({ name: x.i.name, reason: q && "error" in q ? q.error : "no quote" });
       }
     } catch (e) {
       for (const x of listed) failed.push({ name: x.i.name, reason: (e as Error).message });
@@ -83,6 +87,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   const skippedSample = !opts.includeSample && (await db.instruments.filter((i) => !!i.sample).count()) > 0;
   const parts = [`Updated ${points.length} price${points.length === 1 ? "" : "s"}`];
   if (failed.length) parts.push(`${failed.length} failed (${failed.slice(0, 3).map((f) => f.name).join(", ")}${failed.length > 3 ? "…" : ""}) — enter those manually`);
+  if (fellBack.length) parts.push(`${fellBack.length} via fallback source (${fellBack.slice(0, 3).join(", ")}${fellBack.length > 3 ? "…" : ""})`);
   if (skippedSample) parts.push("sample holdings keep their sample prices");
   if (funds.length + listed.length === 0) parts.splice(0, 1, "Nothing to price from the web yet — add a fund with an AMFI code or a stock with a symbol");
   return { message: parts.join(" · "), updated: points.length, failed, proxyOnline: true };

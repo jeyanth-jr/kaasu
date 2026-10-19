@@ -42,6 +42,8 @@ export function PctChange({ pct, className }: { pct: number | null; className?: 
 
 const SOURCE_LABEL: Record<PricePoint["source"], string> = {
   amfi: "AMFI",
+  google: "Google Finance",
+  yahoo: "Yahoo Finance",
   quote: "Quote",
   manual: "Manual",
   derived: "Derived",

@@ -157,7 +157,8 @@ export interface PricePoint {
   date: ISODate;
   price: number; // rupees per unit
   prevClose?: number;
-  source: "amfi" | "quote" | "manual" | "derived" | "sample";
+  /** "quote" is the pre-provider label kept for older backups. */
+  source: "amfi" | "google" | "yahoo" | "quote" | "manual" | "derived" | "sample";
   fetchedAt: string; // ISO timestamp
 }
 
@@ -234,6 +235,8 @@ export interface Settings {
   excludeEmergencyFromAllocation: boolean;
   monthlyBudget: Paise;
   tax: TaxConfig;
+  /** Preferred stock/ETF quote provider; the other one is the automatic fallback. */
+  quoteSource: "google" | "yahoo";
   goldPerGramSource: "manual" | "etf";
   goldEtfInstrumentId?: string;
   goldGramsPerEtfUnit?: number;
@@ -275,6 +278,7 @@ export const DEFAULT_SETTINGS: Settings = {
   excludeEmergencyFromAllocation: true,
   monthlyBudget: 50_000_00,
   tax: DEFAULT_TAX,
+  quoteSource: "google",
   goldPerGramSource: "manual",
   privacyMode: false,
 };

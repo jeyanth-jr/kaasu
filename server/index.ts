@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseNavAll, searchSchemes, type AmfiScheme } from "./amfi";
+import { googleExchange, googleQuoteUrl, parseGoogleQuote } from "./google";
 
 const PORT = Number(process.env.KAASU_PROXY_PORT ?? 8787);
 const HOST = process.env.KAASU_PROXY_HOST ?? "127.0.0.1";
@@ -88,9 +89,14 @@ async function loadNavs(force = false): Promise<NavCache> {
 }
 
 // ---------------------------------------------------------------------------
-// Stock / ETF quotes via Yahoo Finance's public chart endpoint (unofficial)
+// Stock / ETF quotes: Google Finance (quote page data) or Yahoo Finance
+// (public chart endpoint). Neither is an official API, so each request tries
+// the preferred provider and falls back to the other.
+
+export type Provider = "google" | "yahoo";
 
 interface Quote {
+  provider: Provider;
   symbol: string;
   price: number;
   prevClose: number | null;
@@ -101,29 +107,38 @@ interface Quote {
 }
 
 const quoteCache = new Map<string, { at: number; q: Quote }>();
+const QUOTE_TTL_MS = 60_000;
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
-function yahooSymbol(exchange: string, symbol: string): string {
-  return `${symbol.toUpperCase()}${exchange.toUpperCase() === "BSE" ? ".BO" : ".NS"}`;
+async function fetchGoogle(exchange: string, symbol: string): Promise<Quote> {
+  const res = await fetch(googleQuoteUrl(exchange, symbol), {
+    headers: { "user-agent": BROWSER_UA, "accept-language": "en-IN,en;q=0.9" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`Google Finance responded ${res.status}`);
+  const g = parseGoogleQuote(await res.text(), symbol, exchange);
+  if (!g) throw new Error(exchange.toUpperCase() === "BSE" ? "not on Google Finance (BSE needs the numeric scrip code, e.g. 500325)" : "symbol not found on Google Finance");
+  return { provider: "google", symbol: `${symbol.toUpperCase()}:${googleExchange(exchange)}`, price: g.price, prevClose: g.prevClose, date: istDay(new Date(g.time)), time: g.time, currency: g.currency, name: g.name };
 }
 
-async function fetchQuote(exchange: string, symbol: string): Promise<Quote> {
-  const ys = yahooSymbol(exchange, symbol);
-  const hit = quoteCache.get(ys);
-  if (hit && Date.now() - hit.at < 60_000) return hit.q;
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ys)}?range=5d&interval=1d`;
+async function fetchYahoo(exchange: string, symbol: string): Promise<Quote> {
+  const ys = `${symbol.toUpperCase()}${exchange.toUpperCase() === "BSE" ? ".BO" : ".NS"}`;
+  // range=1d makes chartPreviousClose the previous session's close (with 5d it is the close before the window).
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ys)}?range=1d&interval=1d`;
   const res = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`quote source responded ${res.status}`);
+  if (!res.ok) throw new Error(`Yahoo responded ${res.status}`);
   const json = (await res.json()) as {
     chart?: { result?: { meta?: Record<string, unknown> }[]; error?: { description?: string } | null };
   };
   const meta = json.chart?.result?.[0]?.meta;
-  if (!meta) throw new Error(json.chart?.error?.description ?? "no data");
+  if (!meta) throw new Error(json.chart?.error?.description ?? "no data from Yahoo");
   const price = Number(meta.regularMarketPrice);
   const t = Number(meta.regularMarketTime);
-  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(t)) throw new Error("no price in response");
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(t)) throw new Error("no price in Yahoo response");
   const when = new Date(t * 1000);
   const prev = Number(meta.chartPreviousClose ?? meta.previousClose);
-  const q: Quote = {
+  return {
+    provider: "yahoo",
     symbol: ys,
     price,
     prevClose: Number.isFinite(prev) && prev > 0 ? prev : null,
@@ -132,8 +147,24 @@ async function fetchQuote(exchange: string, symbol: string): Promise<Quote> {
     currency: String(meta.currency ?? "INR"),
     name: typeof meta.longName === "string" ? meta.longName : typeof meta.shortName === "string" ? meta.shortName : undefined,
   };
-  quoteCache.set(ys, { at: Date.now(), q });
-  return q;
+}
+
+async function fetchQuote(exchange: string, symbol: string, preferred: Provider): Promise<Quote> {
+  const key = `${preferred}:${exchange}:${symbol}`.toUpperCase();
+  const hit = quoteCache.get(key);
+  if (hit && Date.now() - hit.at < QUOTE_TTL_MS) return hit.q;
+  const order: Provider[] = preferred === "google" ? ["google", "yahoo"] : ["yahoo", "google"];
+  const errors: string[] = [];
+  for (const p of order) {
+    try {
+      const q = await (p === "google" ? fetchGoogle(exchange, symbol) : fetchYahoo(exchange, symbol));
+      quoteCache.set(key, { at: Date.now(), q });
+      return q;
+    } catch (e) {
+      errors.push(`${p}: ${(e as Error).message}`);
+    }
+  }
+  throw new Error(errors.join("; "));
 }
 
 // ---------------------------------------------------------------------------
@@ -183,12 +214,13 @@ app.get("/api/quote", async (req, res) => {
     .map((s) => s.trim())
     .filter((s) => /^(NSE|BSE):[A-Za-z0-9&._-]{1,20}$/.test(s))
     .slice(0, 100);
+  const preferred: Provider = req.query.source === "yahoo" ? "yahoo" : "google";
   const out: Record<string, Quote | { error: string }> = {};
   await Promise.all(
     items.map(async (it) => {
       const [ex, sym] = it.split(":") as [string, string];
       try {
-        out[it] = await fetchQuote(ex, sym);
+        out[it] = await fetchQuote(ex, sym, preferred);
       } catch (e) {
         out[it] = { error: (e as Error).message };
       }

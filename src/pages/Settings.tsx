@@ -71,6 +71,15 @@ export function SettingsPage() {
         </Section>
 
         <Section id="prices" title="Prices">
+          <Field label="Stock & ETF prices from" hint="Mutual fund NAVs always come from AMFI. If the chosen source fails for a symbol, the other one is tried automatically.">
+            {(id) => (
+              <Select id={id} value={settings.quoteSource} onChange={(e) => set({ quoteSource: e.target.value as "google" | "yahoo" })} className="max-w-xs">
+                <option value="google">Google Finance (like GOOGLEFINANCE in Sheets)</option>
+                <option value="yahoo">Yahoo Finance</option>
+              </Select>
+            )}
+          </Field>
+          <div className="mt-4" />
           <PricesSection />
           <div className="mt-4 border-t border-line pt-3">
             <Field label="Physical gold price per gram" hint="Either enter it manually on the holding, or derive it from a gold ETF's price">
@@ -206,7 +215,9 @@ function PricesSection() {
           Start it with <code className="rounded bg-sunken px-1">npm run dev</code> (or <code className="rounded bg-sunken px-1">npm run proxy</code>). Without it you can still enter prices manually on each holding.
         </Callout>
       )}
-      <p className="text-sm text-muted">Fund NAVs come from AMFI's daily NAV file (cached for the day). Stock and ETF prices come from Yahoo Finance's public chart endpoint, which is unofficial and may stop working; manual prices are the fallback.</p>
+      <p className="text-sm text-muted">
+        Fund NAVs come from AMFI's daily NAV file (cached for the day). Stock and ETF prices are read from Google Finance's quote page or Yahoo Finance's chart endpoint. Neither is an official API, so either can change without notice; manual prices are always the last resort. BSE symbols on Google Finance need the numeric scrip code (e.g. 500325).
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button
           disabled={busy}

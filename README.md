@@ -8,7 +8,7 @@ A local-first portfolio tracker for an Indian retail investor. It covers stocks,
 - **Tax (India, new regime):** per-lot holding days and the date each lot turns long-term. Unrealised STCG/LTCG split, realised gains this FY, remaining LTCG exemption, a FIFO-aware zero-tax harvest helper, and lots turning long-term soon. Every rate and threshold is editable in one place.
 - **Calendar:** RD/FD/bond maturities, coupons, SIP dates, commitments and EMI end dates, plus a monthly plan comparing planned vs actually invested.
 - **Import/export:** CSV import with a column-mapping screen, full JSON backup and restore (optionally encrypted), and a transactions CSV export.
-- **Prices:** AMFI's daily NAV file for mutual funds, and a public quote source for NSE/BSE stocks and ETFs, both through a tiny local proxy. Manual prices always work. A price is never shown without its date and source.
+- **Prices:** AMFI's daily NAV file for mutual funds, and Google Finance (or Yahoo Finance, as fallback) for NSE/BSE stocks and ETFs, both through a tiny local proxy. Manual prices always work. A price is never shown without its date and source.
 - Light and dark themes, works on a phone (bottom tabs), installable as a PWA, and a privacy mode that blurs every amount.
 
 > Kaasu is a personal tracker, not investment or tax advice.
@@ -27,7 +27,7 @@ Open http://localhost:5173. `npm run dev` starts two processes:
 | Process | Port | What it does |
 | --- | --- | --- |
 | Vite (the app) | 5173 | Serves the UI. Requests to `/api/*` are forwarded to the proxy. |
-| Price proxy (`server/index.ts`) | 8787, localhost only | Fetches AMFI NAVs and quotes. Stores nothing about your portfolio. |
+| Price proxy (`server/index.ts`) | 8787, localhost only | Fetches AMFI NAVs and Google/Yahoo quotes. Stores nothing about your portfolio. |
 
 Click **Load sample data** to explore with a clearly labelled fictional portfolio, and **Clear sample data** (Dashboard or Settings) to remove it. Your own entries are never touched.
 
@@ -109,7 +109,8 @@ The harvest helper respects FIFO: it never suggests a sale that would first forc
 ## Prices
 
 - **Mutual funds:** `portal.amfiindia.com/spages/NAVAll.txt`, fetched by the proxy, parsed from its header row (AMFI has changed columns before) and cached on disk for the IST day in `.cache/`.
-- **Stocks, ETFs and gold ETFs:** Yahoo Finance's public chart endpoint (`SYMBOL.NS` or `.BO`), cached for 60 seconds. It is unofficial and may change or rate-limit. If it fails, the holding says so and you enter a manual price.
+- **Stocks, ETFs and gold ETFs:** Google Finance by default, the same data `GOOGLEFINANCE()` uses in Sheets. Google has no public API, so the proxy reads the quote page (`google.com/finance/quote/INFY:NSE`) and takes the price, previous close and trade time for exactly the requested symbol. Related stocks on the page are never used. On BSE, Google needs the numeric scrip code (`500325`, not `RELIANCE`).
+- **Fallback:** if Google can't price a symbol, Yahoo Finance's public chart endpoint (`SYMBOL.NS` or `.BO`) is tried, and vice versa if you choose Yahoo in Settings → Prices. Quotes are cached for 60 seconds. Neither source is official and either may change. If both fail, the holding says so and you enter a manual price.
 - **Physical gold:** either a manual price per gram, or derived from a gold ETF's price ÷ grams per unit (Settings → Prices).
 - Refreshing prices never overwrites sample holdings, which keep their sample prices.
 
@@ -129,13 +130,13 @@ Domain code has no React or IndexedDB dependency. Everything on screen is derive
 
 ## Tests
 
-`npm test` runs 71 tests:
+`npm test` runs 75 tests:
 
 - **XIRR:** the Excel reference case, leap years, SIPs, extreme rates.
 - **FIFO:** partial lots, charges, splits/bonus, fractional units, same-day ordering, oversell.
 - **Holding period and tax:** month-end and leap-day edges, exemption, set-off order, cess, harvest helper.
 - **Domain logic:** allocation and rebalancing, look-through concentration, RD maturity, calendar, monthly plan.
-- **CSV and AMFI parsing:** both the old 6-column and new 8-column AMFI layouts.
+- **CSV and price parsing:** both the old 6-column and new 8-column AMFI layouts, and Google Finance quote pages (exact symbol only, BSE codes, `M&M`).
 - **Storage:** sample data, backup round-trip and corruption checks, encryption, import undo.
 
 ## Roadmap
