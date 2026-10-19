@@ -9,10 +9,10 @@
     "dev:web": "vite --host",
     "dev:proxy": "tsx watch server/index.ts",
     "proxy": "tsx server/index.ts",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "start": "npm run build && concurrently -k -n web,proxy \"vite preview --host\" \"tsx server/index.ts\"",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
