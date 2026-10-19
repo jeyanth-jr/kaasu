@@ -57,6 +57,9 @@ export function SettingsPage() {
         )}
 
         <Section id="profile" title="You">
+          <div className="mb-3 max-w-sm">
+            <NameField value={settings.displayName ?? ""} onSave={(displayName) => set({ displayName })} />
+          </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Monthly expenses" hint="For the emergency-fund meter">
               {(id) => <MoneyInput id={id} value={settings.monthlyExpenses} onChange={(p) => set({ monthlyExpenses: p ?? 0 })} />}
@@ -292,6 +295,27 @@ function PricesSection() {
       </div>
       {msg && <p className="text-xs text-muted">{msg}</p>}
     </div>
+  );
+}
+
+/** Saves when you leave the field, so typing never races the database. */
+function NameField({ value, onSave }: { value: string; onSave: (name: string | undefined) => void }) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <Field label="What should we call you?" hint="Shown in your greeting. Leave empty to remove it.">
+      {(id) => (
+        <Input
+          id={id}
+          value={text}
+          maxLength={40}
+          autoComplete="given-name"
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => text.trim() !== value && onSave(text.trim() || undefined)}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        />
+      )}
+    </Field>
   );
 }
 
