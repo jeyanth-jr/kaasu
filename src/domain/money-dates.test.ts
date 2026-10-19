@@ -63,3 +63,20 @@ describe("dates", () => {
     expect(daysBetween("2025-01-01", "2025-03-01")).toBe(59);
   });
 });
+
+describe("salary sanity check", () => {
+  it("flags an extra or missing zero against the usual salary", async () => {
+    const { salaryLooksOff } = await import("./money");
+    expect(salaryLooksOff(25_00_000_00, 25_000_00)).toBe(true);
+    expect(salaryLooksOff(2_500_00, 25_000_00)).toBe(true);
+    expect(salaryLooksOff(26_000_00, 25_000_00)).toBe(false);
+    expect(salaryLooksOff(80_000_00, 1_20_000_00)).toBe(false);
+  });
+
+  it("with nothing to compare, only flags very large amounts", async () => {
+    const { salaryLooksOff } = await import("./money");
+    expect(salaryLooksOff(25_00_000_00)).toBe(true);
+    expect(salaryLooksOff(25_000_00)).toBe(false);
+    expect(salaryLooksOff(0, 25_000_00)).toBe(false);
+  });
+});

@@ -275,11 +275,16 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
 
 export function Sheet({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Parents usually pass an inline onClose, a new function on every render. Reading it through a ref keeps
+  // the effect below from re-running on each keystroke, which pulled focus out of the field you were typing in
+  // (and dismissed the phone keyboard).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeRef.current();
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -289,7 +294,7 @@ export function Sheet({ open, onClose, title, children, footer, wide }: { open: 
       document.body.style.overflow = "";
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
   // Rendered on <body>: an ancestor with backdrop-filter (the top bar) becomes the containing block
   // of `position: fixed` children, which squashed sheets opened from inside it into a thin strip.
   return createPortal(

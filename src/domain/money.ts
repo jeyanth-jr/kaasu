@@ -124,6 +124,16 @@ export function parseAmount(text: string | number | null | undefined): number | 
   return neg ? -n : n;
 }
 
+/**
+ * Whether a salary looks like a typo (an extra zero or a missing one): far from the usual amount,
+ * or very large when there is nothing to compare with. The app asks to confirm rather than refusing.
+ */
+export function salaryLooksOff(amount: Paise, usual?: Paise | null): boolean {
+  if (!(amount > 0)) return false;
+  if (usual && usual > 0) return amount >= usual * 4 || amount * 4 <= usual;
+  return amount >= 10_00_000_00;
+}
+
 export function roundQty(q: number): number {
   return Math.round(q * 1e4) / 1e4;
 }

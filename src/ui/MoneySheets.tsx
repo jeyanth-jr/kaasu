@@ -6,10 +6,11 @@ import { saveSettings } from "../db/db";
 import { CATEGORIES, categoryOf, guessStatementMapping, parseStatement, type CashEntry, type EntryKind, type StatementMapping, type StatementRow } from "../domain/cashflow";
 import { parseCsvText } from "../domain/csv";
 import { formatDate, monthKey, todayISO } from "../domain/dates";
-import { formatINR } from "../domain/money";
+import { formatINR, salaryLooksOff } from "../domain/money";
 import { CategoryIcon, CommitmentIcon } from "./categoryIcons";
 import { Badge, Button, Callout, Field, Input, Sheet, Toggle, cx } from "./components";
 import { AccountPicker, defaultAccountId, useAccounts } from "./accounts";
+import { BigMoneyInput } from "./inputs";
 import { useData } from "./data";
 import { IconCheck, IconParty } from "./icons";
 import { useCommitments } from "./money";
@@ -151,23 +152,7 @@ export function EntrySheet({ open, onClose, kind: initialKind = "expense", entry
 }
 
 function BigAmount({ value, onChange }: { value: number | null; onChange: (p: number | null) => void }) {
-  return (
-    <div className="flex items-baseline gap-1">
-      <span className="display text-3xl font-bold text-faint">₹</span>
-      <input
-        autoFocus
-        inputMode="decimal"
-        className="display w-full bg-transparent text-4xl font-extrabold text-ink outline-none placeholder:text-faint/60 num"
-        placeholder="0"
-        value={value === null ? "" : String(value / 100)}
-        onChange={(e) => {
-          const t = e.target.value.replace(/[^\d.]/g, "");
-          onChange(t === "" ? null : Math.round(Number(t) * 100));
-        }}
-        aria-label="Amount in rupees"
-      />
-    </div>
-  );
+  return <BigMoneyInput value={value} onChange={onChange} autoFocus />;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +167,7 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
   const received =
     cash.find((e) => e.id === record?.salaryEntryId) ?? cash.find((e) => e.kind === "income" && e.category === "salary" && monthKey(e.date) === month);
   const [step, setStep] = useState<"confirm" | "plan">(received ? "plan" : "confirm");
+  const [fixing, setFixing] = useState(false);
   const [amount, setAmount] = useState<number | null>(settings.salary?.amount ?? null);
   const [date, setDate] = useState(todayISO());
   const [accountId, setAccountId] = useState(settings.salary?.accountId ?? "");
@@ -194,6 +180,7 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
   useEffect(() => {
     if (open) {
       setStep(received ? "plan" : "confirm");
+      setFixing(false);
       setAmount(settings.salary?.amount ?? null);
       setAccountId(settings.salary?.accountId ?? "");
     }
@@ -201,22 +188,55 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
 
   async function confirm() {
     if (!amount) return;
+    if (fixing && received) {
+      // Correct the recorded salary in place: same entry, so the checklist and the account balance follow.
+      await saveEntry({ date, kind: "income", amount, category: "salary", note: received.note, accountId: accountId || undefined, postToAccount: !!accountId }, received);
+      setFixing(false);
+      setStep("plan");
+      return;
+    }
     await confirmSalary({ date, amount, accountId: accountId || undefined, postToAccount: !!accountId, employer: settings.salary?.employer });
     if (accountId) await saveSettings({ lastAccountId: accountId });
     burst();
     setStep("plan");
   }
 
+  function startFix() {
+    if (!received) return;
+    setAmount(received.amount);
+    setDate(received.date);
+    setAccountId(received.accountId ?? "");
+    setFixing(true);
+    setStep("confirm");
+  }
+
+  async function undoSalary() {
+    if (!received || !window.confirm("Remove this salary entry? Nothing else changes, and you can confirm payday again.")) return;
+    await deleteEntry(received);
+    setFixing(false);
+    setAmount(settings.salary?.amount ?? null);
+    setStep("confirm");
+  }
+
+  const looksOff = step === "confirm" && !!amount && salaryLooksOff(amount, settings.salary?.amount);
+
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title={step === "confirm" ? "Payday!" : "Make it work"}
+      title={step === "confirm" ? (fixing ? "Fix your salary" : "Payday!") : "Make it work"}
       footer={
         step === "confirm" ? (
-          <Button variant="primary" size="lg" onClick={confirm} disabled={!amount}>
-            <IconParty size={18} /> Yes, salary's in
-          </Button>
+          <>
+            {fixing && (
+              <Button variant="ghost" className="mr-auto" onClick={() => (setFixing(false), setStep("plan"))}>
+                Cancel
+              </Button>
+            )}
+            <Button variant="primary" size="lg" onClick={confirm} disabled={!amount}>
+              <IconParty size={18} /> {fixing ? "Save change" : looksOff && amount ? `Yes, ${formatINR(amount)} is right` : "Yes, salary's in"}
+            </Button>
+          </>
         ) : (
           <Button variant="primary" onClick={onClose}>
             Done
@@ -229,20 +249,13 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
           <p className="text-sm text-muted">Confirm what actually landed. Kaasu then lines up where it goes before you spend a rupee.</p>
           <div className="rounded-3xl bg-hero px-5 py-4">
             <div className="text-xs font-semibold text-white/80">In-hand salary</div>
-            <div className="flex items-baseline gap-1 text-white">
-              <span className="display text-3xl font-bold opacity-70">₹</span>
-              <input
-                inputMode="decimal"
-                className="display w-full bg-transparent text-4xl font-extrabold outline-none placeholder:text-white/50 num"
-                value={amount === null ? "" : String(amount / 100)}
-                onChange={(e) => {
-                  const t = e.target.value.replace(/[^\d.]/g, "");
-                  setAmount(t === "" ? null : Math.round(Number(t) * 100));
-                }}
-                aria-label="Salary amount"
-              />
-            </div>
+            <BigMoneyInput value={amount} onChange={setAmount} tone="hero" label="Salary amount" />
           </div>
+          {looksOff && (
+            <Callout tone="warn" title="Double-check the amount">
+              {settings.salary?.amount ? `Your usual salary is ${formatINR(settings.salary.amount)}. ` : ""}This is {formatINR(amount ?? 0)}. An extra or missing zero is easy to type. You can fix it later from here too.
+            </Callout>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Credited on">{(id) => <Input id={id} type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} />}</Field>
           </div>
@@ -260,6 +273,19 @@ export function PaydaySheet({ open, onClose }: { open: boolean; onClose: () => v
             <MiniStat label="Committed" value={formatINR(committed)} />
             <MiniStat label="Free to spend" value={formatINR(salary - committed)} tone={salary - committed >= 0 ? "gain" : "loss"} />
           </div>
+          {received && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sunken/60 px-3.5 py-2.5 text-sm">
+              <span className="text-muted">Wrong amount?</span>
+              <span className="flex gap-2">
+                <Button size="sm" onClick={startFix}>
+                  Fix amount
+                </Button>
+                <Button size="sm" variant="danger" onClick={undoSalary}>
+                  Undo salary
+                </Button>
+              </span>
+            </div>
+          )}
           <div>
             <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted">
               <span>Payday checklist</span>

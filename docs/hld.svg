@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1010" width="1500" height="1010" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6f3ec"/><stop offset="1" stop-color="#e9edf4"/></linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d3d70"/><stop offset="1" stop-color="#0c1c3d"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3d27c"/><stop offset="1" stop-color="#c99a2e"/></linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#18305a"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9a7420"/></marker>
+    <filter id="sh" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f2147" flood-opacity="0.12"/></filter>
+  </defs>
+  <rect width="1500" height="1010" fill="url(#bg)"/>
+
+  <text x="40" y="52" font-size="30" font-weight="800" fill="#0f2147">Kaasu: high-level design</text>
+  <text x="40" y="78" font-size="15" fill="#536076">Local-first portfolio, budgeting and goals tracker. Data lives on the device first and syncs to a per-user cloud copy.</text>
+
+  <!-- CLIENT -->
+  <rect x="40" y="110" width="440" height="800" rx="22" fill="#fff" stroke="#c9c3b4" filter="url(#sh)"/>
+  <rect x="40" y="110" width="440" height="52" rx="22" fill="url(#navy)"/>
+  <rect x="40" y="140" width="440" height="22" fill="url(#navy)"/>
+  <text x="62" y="143" font-size="18" font-weight="700" fill="#fff">Client: browser / installed PWA</text>
+
+  <g font-size="14">
+    <rect x="64" y="184" width="392" height="136" rx="14" fill="#eef2f8" stroke="#b8c4d9"/>
+    <text x="80" y="210" font-weight="700" fill="#18305a">UI layer (React 19 + Vite + TypeScript)</text>
+    <text x="80" y="234" fill="#3b475a">Pages: Home, Money, Accounts, Goals, Plans &amp; debt,</text>
+    <text x="80" y="254" fill="#3b475a">Holdings, Allocation, Tax, Calendar, Help, Settings</text>
+    <text x="80" y="278" fill="#3b475a">Tailwind v4 liquid-glass theme, Recharts, motion</text>
+    <text x="80" y="298" fill="#3b475a">Command palette, tour, celebrations, Turnstile widget</text>
+
+    <rect x="64" y="338" width="392" height="136" rx="14" fill="#fbf4e1" stroke="#e0c880"/>
+    <text x="80" y="364" font-weight="700" fill="#7a5a10">Domain layer (pure, unit-tested)</text>
+    <text x="80" y="388" fill="#5b4a1d">FIFO lots, XIRR, India tax lots and set-off, allocation,</text>
+    <text x="80" y="408" fill="#5b4a1d">cash flow and payday, EMI / debt schedules,</text>
+    <text x="80" y="428" fill="#5b4a1d">bank-account ledger, goals progress, savings wins.</text>
+    <text x="80" y="454" fill="#5b4a1d">All money is integer paise; dates are ISO strings.</text>
+
+    <rect x="64" y="492" width="392" height="124" rx="14" fill="#e8f5ef" stroke="#9bd0b8"/>
+    <text x="80" y="518" font-weight="700" fill="#0d6b49">Local store: IndexedDB via Dexie</text>
+    <text x="80" y="542" fill="#2f5a49">instruments, txns, prices, cash, goals, goalFunds,</text>
+    <text x="80" y="562" fill="#2f5a49">plans, liabilities, paydays, settings</text>
+    <text x="80" y="586" fill="#2f5a49">Source of truth on the device; works fully offline.</text>
+    <text x="80" y="606" fill="#2f5a49">Holdings and balances are derived from transactions.</text>
+
+    <rect x="64" y="634" width="392" height="124" rx="14" fill="#eef2f8" stroke="#b8c4d9"/>
+    <text x="80" y="660" font-weight="700" fill="#18305a">Sync engine</text>
+    <text x="80" y="684" fill="#3b475a">Table hooks write changes to an outbox. Push, then</text>
+    <text x="80" y="704" fill="#3b475a">pull by server cursor; last write wins; tombstones</text>
+    <text x="80" y="724" fill="#3b475a">for deletes. Sample data never syncs. A device-owner</text>
+    <text x="80" y="744" fill="#3b475a">guard stops one account's data leaking into another.</text>
+
+    <rect x="64" y="776" width="392" height="112" rx="14" fill="#f3f1ec" stroke="#cfc9ba"/>
+    <text x="80" y="802" font-weight="700" fill="#3b475a">Also on the device</text>
+    <text x="80" y="826" fill="#536076">Service worker (offline shell) and web manifest</text>
+    <text x="80" y="846" fill="#536076">Encrypted backups: AES-256 in the browser, JSON file</text>
+    <text x="80" y="866" fill="#536076">CSV import (holdings, bank statements) and CSV export</text>
+  </g>
+
+  <!-- VERCEL -->
+  <rect x="560" y="110" width="360" height="118" rx="20" fill="#fff" stroke="#c9c3b4" filter="url(#sh)"/>
+  <rect x="560" y="110" width="360" height="40" rx="20" fill="#0f1726"/><rect x="560" y="132" width="360" height="18" fill="#0f1726"/>
+  <text x="580" y="137" font-size="16" font-weight="700" fill="#fff">Vercel: static frontend</text>
+  <g font-size="13.5" fill="#3b475a">
+    <text x="580" y="174">Serves the built single-page app (hash routing)</text>
+    <text x="580" y="194">CSP, HSTS, frame and MIME protections in headers</text>
+    <text x="580" y="214">Public env only: Supabase URL and key, API base</text>
+  </g>
+
+  <!-- CLOUDFLARE -->
+  <rect x="560" y="268" width="360" height="400" rx="20" fill="#fff" stroke="#e6b35a" filter="url(#sh)"/>
+  <rect x="560" y="268" width="360" height="40" rx="20" fill="#e8892b"/><rect x="560" y="290" width="360" height="18" fill="#e8892b"/>
+  <text x="580" y="295" font-size="16" font-weight="700" fill="#fff">Cloudflare</text>
+
+  <rect x="580" y="326" width="320" height="214" rx="14" fill="#fdf1e0" stroke="#f0c488"/>
+  <text x="596" y="352" font-size="14.5" font-weight="700" fill="#8a4a0a">Worker: price API (workers.dev)</text>
+  <g font-size="13.5" fill="#6a4a22">
+    <text x="596" y="378">1. CORS allow-list by Origin</text>
+    <text x="596" y="400">2. Per-IP rate limit (shared binding)</text>
+    <text x="596" y="422">3. Verify Supabase JWT (JWKS, jose)</text>
+    <text x="596" y="444">4. Per-user rate limit</text>
+    <text x="596" y="466">5. Handlers: NAV lookup, quotes, search,</text>
+    <text x="596" y="486">   Google Finance with Yahoo fallback</text>
+    <text x="596" y="510">Shared core runs on Node in local dev too</text>
+  </g>
+
+  <rect x="580" y="556" width="320" height="42" rx="12" fill="#fdf1e0" stroke="#f0c488"/>
+  <text x="596" y="582" font-size="13.5" fill="#6a4a22"><tspan font-weight="700" fill="#8a4a0a">KV (optional):</tspan> daily AMFI NAV file cache</text>
+  <rect x="580" y="610" width="320" height="42" rx="12" fill="#fdf1e0" stroke="#f0c488"/>
+  <text x="596" y="636" font-size="13.5" fill="#6a4a22"><tspan font-weight="700" fill="#8a4a0a">Turnstile:</tspan> CAPTCHA widget and verification</text>
+
+  <!-- MARKET DATA -->
+  <rect x="560" y="708" width="360" height="124" rx="20" fill="#fff" stroke="#c9c3b4" filter="url(#sh)"/>
+  <text x="580" y="738" font-size="16" font-weight="700" fill="#18305a">Public market data sources</text>
+  <g font-size="13.5" fill="#3b475a">
+    <text x="580" y="764">AMFI: daily mutual fund NAVs</text>
+    <text x="580" y="786">Google Finance page data: stocks and ETFs</text>
+    <text x="580" y="808">Yahoo Finance: fallback quotes and search</text>
+  </g>
+
+  <!-- SUPABASE -->
+  <rect x="1000" y="110" width="460" height="560" rx="22" fill="#fff" stroke="#8fd0ae" filter="url(#sh)"/>
+  <rect x="1000" y="110" width="460" height="46" rx="22" fill="#12805a"/><rect x="1000" y="136" width="460" height="20" fill="#12805a"/>
+  <text x="1022" y="141" font-size="18" font-weight="700" fill="#fff">Supabase</text>
+
+  <rect x="1020" y="176" width="420" height="168" rx="14" fill="#e8f5ef" stroke="#9bd0b8"/>
+  <text x="1038" y="202" font-size="15" font-weight="700" fill="#0d6b49">Auth</text>
+  <g font-size="13.5" fill="#2f5a49">
+    <text x="1038" y="226">Email magic link and Google OAuth (PKCE)</text>
+    <text x="1038" y="248">Issues short-lived JWTs, refresh tokens</text>
+    <text x="1038" y="270">CAPTCHA verified server-side with the Turnstile secret</text>
+    <text x="1038" y="292">Redirect URL allow-list; email via custom SMTP</text>
+    <text x="1038" y="314">Rate limits on sign-in and email sending</text>
+  </g>
+
+  <rect x="1020" y="362" width="420" height="190" rx="14" fill="#e8f5ef" stroke="#9bd0b8"/>
+  <text x="1038" y="388" font-size="15" font-weight="700" fill="#0d6b49">Postgres: one generic documents table</text>
+  <g font-size="13.5" fill="#2f5a49">
+    <text x="1038" y="412">records (user_id, collection, id, data jsonb, seq, deleted)</text>
+    <text x="1038" y="434">Row-level security forced: a user sees only their rows</text>
+    <text x="1038" y="456">Server-assigned seq gives a cursor for incremental pull</text>
+    <text x="1038" y="478">Deletes are tombstones; validated collection names</text>
+    <text x="1038" y="500">Collections: instruments, txns, cash, goals, goalFunds,</text>
+    <text x="1038" y="520">plans, liabilities, paydays, settings and more</text>
+  </g>
+
+  <rect x="1020" y="570" width="420" height="82" rx="14" fill="#e8f5ef" stroke="#9bd0b8"/>
+  <text x="1038" y="596" font-size="15" font-weight="700" fill="#0d6b49">SQL functions</text>
+  <text x="1038" y="620" font-size="13.5" fill="#2f5a49">record_usage: per-user write quota</text>
+  <text x="1038" y="640" font-size="13.5" fill="#2f5a49">delete_my_account: removes all of a user's data</text>
+
+  <!-- IDENTITY / EMAIL -->
+  <rect x="1000" y="712" width="220" height="120" rx="18" fill="#fff" stroke="#c9c3b4" filter="url(#sh)"/>
+  <text x="1018" y="740" font-size="15" font-weight="700" fill="#18305a">Google Identity</text>
+  <text x="1018" y="764" font-size="13.5" fill="#3b475a">OAuth consent and</text>
+  <text x="1018" y="784" font-size="13.5" fill="#3b475a">sign-in for Google</text>
+  <text x="1018" y="804" font-size="13.5" fill="#3b475a">accounts</text>
+  <rect x="1240" y="712" width="220" height="120" rx="18" fill="#fff" stroke="#c9c3b4" filter="url(#sh)"/>
+  <text x="1258" y="740" font-size="15" font-weight="700" fill="#18305a">SMTP provider</text>
+  <text x="1258" y="764" font-size="13.5" fill="#3b475a">Delivers the sign-in</text>
+  <text x="1258" y="784" font-size="13.5" fill="#3b475a">link emails from a</text>
+  <text x="1258" y="804" font-size="13.5" fill="#3b475a">verified domain</text>
+
+  <!-- ARROWS -->
+  <g fill="none" stroke-width="2.2">
+    <path d="M480 170 H560" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M480 631 H580" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M260 110 V94 H1230 V108" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M480 420 H580" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M900 350 H960 V250 H1020" stroke="#9a7420" stroke-dasharray="7 5" marker-end="url(#arrG)"/>
+    <path d="M740 668 V708" stroke="#9a7420" marker-end="url(#arrG)"/>
+    <path d="M480 700 H530 V846 H980 V455 H1020" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M1110 670 V712" stroke="#18305a" marker-end="url(#arr)"/>
+    <path d="M1350 670 V712" stroke="#18305a" marker-end="url(#arr)"/>
+  </g>
+  <g font-size="12" fill="#536076">
+    <text x="1120" y="696">OAuth</text>
+    <text x="1360" y="696">sign-in emails</text>
+    <text x="1080" y="99">sign in, CAPTCHA token</text>
+    <text x="966" y="342">JWKS</text>
+    <text x="762" y="693">quotes, NAVs</text>
+    <text x="545" y="861" text-anchor="start">records over HTTPS, scoped by RLS</text>
+  </g>
+
+  <g font-size="13" font-weight="700">
+    <g><circle cx="520" cy="170" r="13" fill="url(#gold)"/><text x="520" y="175" text-anchor="middle" fill="#2a1d05">1</text></g>
+    <g><circle cx="530" cy="631" r="13" fill="url(#gold)"/><text x="530" y="636" text-anchor="middle" fill="#2a1d05">2</text></g>
+    <g><circle cx="1060" cy="94" r="13" fill="url(#gold)"/><text x="1060" y="99" text-anchor="middle" fill="#2a1d05">3</text></g>
+    <g><circle cx="530" cy="420" r="13" fill="url(#gold)"/><text x="530" y="425" text-anchor="middle" fill="#2a1d05">4</text></g>
+    <g><circle cx="960" cy="320" r="13" fill="url(#gold)"/><text x="960" y="325" text-anchor="middle" fill="#2a1d05">5</text></g>
+    <g><circle cx="740" cy="688" r="13" fill="url(#gold)"/><text x="740" y="693" text-anchor="middle" fill="#2a1d05">6</text></g>
+    <g><circle cx="530" cy="780" r="13" fill="url(#gold)"/><text x="530" y="785" text-anchor="middle" fill="#2a1d05">7</text></g>
+  </g>
+
+  <!-- LEGEND -->
+  <rect x="560" y="868" width="900" height="124" rx="16" fill="#fff" stroke="#c9c3b4"/>
+  <text x="580" y="894" font-size="14" font-weight="700" fill="#18305a">Request flows</text>
+  <g font-size="13" fill="#3b475a">
+    <text x="580" y="918"><tspan font-weight="700" fill="#9a7420">1</tspan>  Load the app from Vercel</text>
+    <text x="580" y="940"><tspan font-weight="700" fill="#9a7420">2</tspan>  Solve the Turnstile check in the browser</text>
+    <text x="580" y="962"><tspan font-weight="700" fill="#9a7420">3</tspan>  Sign in with Supabase; a JWT comes back</text>
+    <text x="580" y="984"><tspan font-weight="700" fill="#9a7420">4</tspan>  Price requests carry that JWT to the Worker</text>
+    <text x="1010" y="918"><tspan font-weight="700" fill="#9a7420">5</tspan>  Worker verifies the JWT with Supabase's keys</text>
+    <text x="1010" y="940"><tspan font-weight="700" fill="#9a7420">6</tspan>  Worker fetches quotes and NAVs, caches the NAV file</text>
+    <text x="1010" y="962"><tspan font-weight="700" fill="#9a7420">7</tspan>  Sync pushes and pulls changed records; row-level</text>
+    <text x="1030" y="982">security limits every query to the signed-in user</text>
+  </g>
+</svg>
