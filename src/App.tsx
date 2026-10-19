@@ -23,6 +23,7 @@ import {
   IconPie,
   IconBanknote,
   IconBriefcase,
+  IconHelp,
   IconPlus,
   IconReceipt,
   IconReceiptPlain,
@@ -41,6 +42,7 @@ import { endDemo, useDemo } from "./sync/demo";
 import { useSyncActive, useSyncState } from "./sync/state";
 import { Logo } from "./ui/Logo";
 import { Onboarding } from "./ui/Onboarding";
+import { Tour, TourAutoStart } from "./ui/Tour";
 
 // Pages load on demand so the first screen arrives quickly on a phone.
 const DashboardPage = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.DashboardPage })));
@@ -54,19 +56,22 @@ const TaxPage = lazy(() => import("./pages/Tax").then((m) => ({ default: m.TaxPa
 const CalendarPage = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.CalendarPage })));
 const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const LandingPage = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
+const HelpPage = lazy(() => import("./pages/Help").then((m) => ({ default: m.HelpPage })));
 const LegalPage = lazy(() => import("./pages/Legal").then((m) => ({ default: m.LegalPage })));
 
 // ---------------------------------------------------------------------------
 // Global add actions (investment transaction, money entry, payday)
 
 interface AddCtx {
+  openTour: () => void;
   openAdd: (opts?: { instrumentId?: string; txnId?: string }) => void;
   openMoney: (kind: EntryKind) => void;
   openPayday: () => void;
   openChooser: () => void;
 }
-const AddContext = createContext<AddCtx>({ openAdd: () => {}, openMoney: () => {}, openPayday: () => {}, openChooser: () => {} });
+const AddContext = createContext<AddCtx>({ openTour: () => {}, openAdd: () => {}, openMoney: () => {}, openPayday: () => {}, openChooser: () => {} });
 export const useAdd = () => useContext(AddContext);
+export const useTour = () => useContext(AddContext);
 
 // ---------------------------------------------------------------------------
 // Theme (per-device preference)
@@ -111,7 +116,7 @@ const INVEST = [
   { to: "/tax", label: "Tax", icon: IconReceipt },
   { to: "/calendar", label: "Calendar & plan", icon: IconCalendar },
 ];
-const MORE = [{ to: "/plans", label: "Plans & debt", icon: IconRepeat }, ...INVEST.slice(1), { to: "/settings", label: "Settings", icon: IconSettings }];
+const MORE = [{ to: "/plans", label: "Plans & debt", icon: IconRepeat }, ...INVEST.slice(1), { to: "/help", label: "Help & tour", icon: IconHelp }, { to: "/settings", label: "Settings", icon: IconSettings }];
 
 function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof IconHome }) {
   return (
@@ -195,6 +200,7 @@ function Shell({ children }: { children: ReactNode }) {
           <IconPlus size={18} strokeWidth={2.6} /> Add
         </Button>
         <div className="mt-auto flex flex-col gap-1">
+          <SideLink to="/help" label="Help & tour" icon={IconHelp} />
           <SideLink to="/settings" label="Settings" icon={IconSettings} />
         </div>
       </aside>
@@ -389,7 +395,9 @@ export function App() {
   const [money, setMoney] = useState<EntryKind | null>(null);
   const [payday, setPayday] = useState(false);
   const [chooser, setChooser] = useState(false);
+  const [tour, setTour] = useState(false);
   const ctx: AddCtx = {
+    openTour: useCallback(() => setTour(true), []),
     openAdd: useCallback((opts?: { instrumentId?: string; txnId?: string }) => setAdd({ open: true, ...opts }), []),
     openMoney: useCallback((k: EntryKind) => setMoney(k), []),
     openPayday: useCallback(() => setPayday(true), []),
@@ -412,6 +420,7 @@ export function App() {
               <Route path="/tax" element={<TaxPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/privacy" element={<LegalPage doc="privacy" />} />
               <Route path="/terms" element={<LegalPage doc="terms" />} />
               <Route path="*" element={<DashboardPage />} />
@@ -423,6 +432,8 @@ export function App() {
           <EntrySheet open={money !== null} kind={money ?? "expense"} onClose={() => setMoney(null)} />
           <PaydaySheet open={payday} onClose={() => setPayday(false)} />
           <Onboarding />
+          <TourAutoStart onOpen={() => setTour(true)} />
+          <Tour open={tour} onClose={() => setTour(false)} />
           </Gate>
         </HashRouter>
       </AddContext.Provider>

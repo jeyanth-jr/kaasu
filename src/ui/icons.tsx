@@ -80,4 +80,5 @@ export {
   Hand as IconHand,
   Pin as IconPin,
   Rocket as IconRocket,
+  CircleHelp as IconHelp,
 } from "lucide-react";

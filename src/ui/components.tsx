@@ -1,4 +1,5 @@
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { formatDate } from "../domain/dates";
 import { formatCompact, formatINR, formatPct, formatPrice } from "../domain/money";
@@ -289,7 +290,9 @@ export function Sheet({ open, onClose, title, children, footer, wide }: { open: 
       prev?.focus?.();
     };
   }, [open, onClose]);
-  return (
+  // Rendered on <body>: an ancestor with backdrop-filter (the top bar) becomes the containing block
+  // of `position: fixed` children, which squashed sheets opened from inside it into a thin strip.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
@@ -314,7 +317,8 @@ export function Sheet({ open, onClose, title, children, footer, wide }: { open: 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

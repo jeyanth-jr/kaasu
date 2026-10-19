@@ -12,7 +12,7 @@ import { useData } from "./data";
 import { blankInstrument } from "./InstrumentForm";
 import { priceLink } from "../prices/client";
 
-const TEMPLATE = `Date,Name,Symbol,Type,Qty,Price,Amount,Charges
+export const TEMPLATE = `Date,Name,Symbol,Type,Qty,Price,Amount,Charges
 05/04/2025,Infosys,INFY,Buy,10,1450.50,,15.20
 10/04/2025,Parag Parikh Flexi Cap Fund - Direct Growth,,SIP,95.123,52.57,5000,
 `;

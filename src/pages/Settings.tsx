@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTour } from "../App";
 import { db, nowISO, requestPersistence, saveSettings } from "../db/db";
 import { backupFileName, clearAll, createBackup, parseBackup, restoreBackup } from "../db/backup";
 import { decryptText, encryptText, isEncrypted } from "../db/crypto";
@@ -39,6 +40,7 @@ export function SettingsPage() {
   }, [location.hash]);
 
   const set = (patch: Partial<Settings>) => void saveSettings(patch);
+  const { openTour } = useTour();
 
   return (
     <>
@@ -138,6 +140,19 @@ export function SettingsPage() {
 
         <Section id="sample" title="Sample data">
           <SampleSection hasSample={instruments.some((i) => i.sample)} />
+        </Section>
+
+        <Section id="help" title="Help" sub="New here? Replay the tour or read the guide to importing your data.">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={openTour}>
+              Replay the tour
+            </Button>
+            <Link to="/help#import">
+              <Button size="sm" variant="secondary">
+                How to import data
+              </Button>
+            </Link>
+          </div>
         </Section>
 
         <Section id="celebrations" title="Celebrations" sub="Confetti, a toast and a buzz when you hit a savings milestone: 25/50/75/100% of your monthly goal, streaks, net-worth levels and emergency-fund runway.">

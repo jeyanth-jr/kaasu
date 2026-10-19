@@ -259,6 +259,8 @@ export interface Settings {
   displayName?: string;
   /** Set once the welcome flow has been completed or skipped. */
   onboarded?: boolean;
+  /** Set once the product tour has been seen or skipped. */
+  toured?: boolean;
   /** Monthly savings target. Unset = your SIP/RD/chit plans, else 20% of salary. */
   savingsGoal?: Paise;
   /** Milestones already celebrated (kept in settings so every device agrees and none repeats). */

@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { saveSettings } from "../db/db";
 import { budgetLines, categoryOf, CATEGORIES, monthSummary, paydayStatus, safeToSpend, savingsStreak, type CashEntry, type EntryKind } from "../domain/cashflow";
@@ -19,7 +20,12 @@ export function MoneyPage() {
   const [month, setMonth] = useState(monthKey(asOf));
   const [entrySheet, setEntrySheet] = useState<{ kind: EntryKind; entry?: CashEntry } | null>(null);
   const [payday, setPayday] = useState(false);
-  const [statement, setStatement] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [statement, setStatementOpen] = useState(params.get("statement") === "1");
+  const setStatement = (open: boolean) => {
+    setStatementOpen(open);
+    if (!open && params.has("statement")) setParams({}, { replace: true });
+  };
   const [budgets, setBudgets] = useState(false);
   const [salarySetup, setSalarySetup] = useState(false);
 

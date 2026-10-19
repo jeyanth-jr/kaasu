@@ -135,7 +135,7 @@ export async function verifyEmailCode(email: string, token: string): Promise<voi
 
 export async function signInWithGoogle(): Promise<void> {
   const { error } = await need().auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}${location.pathname}` } });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(/not enabled|unsupported provider/i.test(error.message) ? "Google sign-in isn't switched on for this site yet." : error.message);
 }
 
 /** Resolve the "this device holds another account's data" prompt. */
