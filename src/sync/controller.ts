@@ -123,8 +123,8 @@ function need() {
 }
 
 /** Email sign-in: sends a link (and a 6-digit code if the email template includes it). */
-export async function sendEmailLink(email: string): Promise<void> {
-  const { error } = await need().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: `${location.origin}${location.pathname}` } });
+export async function sendEmailLink(email: string, captchaToken?: string): Promise<void> {
+  const { error } = await need().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: `${location.origin}${location.pathname}`, captchaToken } });
   if (error) throw new Error(error.message);
 }
 

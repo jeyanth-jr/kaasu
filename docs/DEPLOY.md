@@ -130,3 +130,21 @@ To test the Worker locally: `npm run cf:dev` (uses a local KV simulation).
 - Supabase's free tier pauses projects after a week of inactivity; the app keeps working locally and syncs when the project is resumed.
 - The Google and Yahoo quote sources are unofficial. If both break, enter prices manually. Mutual fund NAVs come from AMFI.
 - Back up regularly anyway (Settings → Backup): sync is a copy, not a time machine. A bad edit syncs everywhere.
+
+## Abuse protection
+
+### CAPTCHA (Cloudflare Turnstile)
+1. Cloudflare dashboard → **Turnstile** → Add widget. Hostnames: your Vercel domain (and `localhost` if you want it in development). Mode: Managed. Copy the **site key** and **secret key**.
+2. Supabase → Authentication → **Attack Protection** → enable CAPTCHA protection, provider **Turnstile**, paste the **secret key**.
+3. Vercel → Environment Variables: `VITE_TURNSTILE_SITE_KEY` = the site key, then redeploy.
+
+Order matters: set the Vercel variable and redeploy before (or together with) enabling it in Supabase, otherwise sign-in is rejected for lack of a token. "Continue with Google" is not covered by this CAPTCHA.
+
+### Rate limiting
+`wrangler.toml` declares a `RATE_LIMITER` binding (120 requests per minute), applied per IP before sign-in is checked and per user after. It is shared across all Worker instances and works on `workers.dev`. Cloudflare WAF rate-limit rules need your own domain, so they are not used here. Redeploy the Worker for the binding to take effect.
+
+### Email delivery (custom SMTP)
+Supabase's built-in mailer allows only a few emails an hour. Under Authentication → **Emails → SMTP Settings** enable custom SMTP with a provider such as Resend, Brevo or Amazon SES: verify your sending domain (SPF, DKIM), then enter host, port, user, password and a sender address on that domain. Raise Authentication → Rate Limits to match.
+
+### Dependencies
+`.github/dependabot.yml` opens weekly grouped npm updates and monthly GitHub Actions updates. Enable **Dependabot alerts** and **security updates** in the repository's Settings → Code security.

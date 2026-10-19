@@ -12,6 +12,16 @@ workers_dev = true
 # Legacy HS256 Supabase projects also need the secret SUPABASE_JWT_SECRET.
 keep_vars = true
 
+# Shared rate limit across all Worker instances (the in-memory limiter only sees one instance).
+# Two keys are used: the caller's IP before sign-in is checked, then the signed-in user.
+# Workers Rate Limiting works on workers.dev; WAF rate-limit rules would need your own domain.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 # Optional: cache the daily AMFI NAV file in KV so each new Worker instance doesn't re-download it.
 # Without it the Worker still works (it keeps the file in memory per instance).
 # To enable: npx wrangler kv namespace create NAV_KV, then uncomment with the printed id.

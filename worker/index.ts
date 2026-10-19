@@ -8,7 +8,14 @@
 import { RateLimiter, originAllowed, parseOrigins, verifyBearer, withCors } from "../server/auth";
 import { createApi, istDay, type NavStore } from "../server/core";
 
+/** Cloudflare's Workers Rate Limiting binding (shared across every instance, unlike the in-memory fallback). */
+interface RateLimitBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 interface Env {
+  /** Optional rate-limit binding, see wrangler.toml. */
+  RATE_LIMITER?: RateLimitBinding;
   /** KV namespace for the daily NAV file (optional: falls back to per-isolate memory). */
   NAV_KV?: KVNamespace;
   SUPABASE_URL?: string;
@@ -50,6 +57,22 @@ function kvStore(kv: KVNamespace | undefined): NavStore {
 // One handler per isolate so the in-memory NAV index and quote cache are reused across requests.
 let api: ReturnType<typeof createApi> | null = null;
 const limiter = new RateLimiter(120, 60_000);
+const ipLimiter = new RateLimiter(600, 60_000);
+
+/** True when the request may proceed. Uses the shared binding when configured, else this instance's memory. */
+async function allow(env: Env, key: string, fallback: RateLimiter): Promise<boolean> {
+  if (env.RATE_LIMITER) {
+    try {
+      return (await env.RATE_LIMITER.limit({ key })).success;
+    } catch {
+      /* binding unavailable: fall through to the local limiter */
+    }
+  }
+  return fallback.allow(key);
+}
+
+const tooMany = (origin: string | null, allowed: ReturnType<typeof parseOrigins>) =>
+  withCors(new Response(JSON.stringify({ ok: false, error: "slow down: too many requests" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "30" } }), origin, allowed);
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -67,6 +90,8 @@ export default {
 
     const path = new URL(req.url).pathname;
     const open = path === "/api/health";
+    // Throttle by address before doing any token verification, so unauthenticated floods stay cheap.
+    if (!open && !(await allow(env, `ip:${req.headers.get("cf-connecting-ip") ?? "unknown"}`, ipLimiter))) return tooMany(origin, allowed);
     let subject = "anonymous";
     if (!open && env.AUTH_REQUIRED !== "false") {
       if (!env.SUPABASE_URL) {
@@ -76,9 +101,7 @@ export default {
       if (!user) return withCors(new Response(JSON.stringify({ ok: false, error: "sign in required" }), { status: 401, headers: { "content-type": "application/json" } }), origin, allowed);
       subject = user.sub;
     }
-    if (!open && !limiter.allow(subject)) {
-      return withCors(new Response(JSON.stringify({ ok: false, error: "slow down: too many requests" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "30" } }), origin, allowed);
-    }
+    if (!open && !(await allow(env, `user:${subject}`, limiter))) return tooMany(origin, allowed);
 
     api ??= createApi({ navStore: kvStore(env.NAV_KV), allowForceRefresh: false });
     return withCors(await api(req), origin, allowed);

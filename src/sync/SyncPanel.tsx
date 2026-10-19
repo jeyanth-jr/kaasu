@@ -1,3 +1,4 @@
+import { TURNSTILE_SITE_KEY, Turnstile } from "./Turnstile";
 import { useState, type ReactNode } from "react";
 import { formatDate } from "../domain/dates";
 import { Badge, Button, Callout, Field, Input, Sheet } from "../ui/components";
@@ -29,6 +30,9 @@ export function SignInForm({ intro, hidePrivacy }: { intro?: ReactNode; hidePriv
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaRound, setCaptchaRound] = useState(0);
+  const needsCaptcha = Boolean(TURNSTILE_SITE_KEY);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -52,14 +56,21 @@ export function SignInForm({ intro, hidePrivacy }: { intro?: ReactNode; hidePriv
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
-              await sendEmailLink(email);
-              setSent(true);
+              try {
+                await sendEmailLink(email, captcha ?? undefined);
+                setSent(true);
+              } finally {
+                // A token works once; get a fresh one for the next attempt.
+                setCaptcha(null);
+                setCaptchaRound((n) => n + 1);
+              }
             });
           }}
         >
           <Field label="Email">{(id) => <Input id={id} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />}</Field>
-          <Button variant="primary" type="submit" disabled={busy || !email.includes("@")}>
-            <IconMail size={16} /> {busy ? "Sending…" : "Email me a sign-in link"}
+          <Turnstile onToken={setCaptcha} onError={setError} resetKey={captchaRound} />
+          <Button variant="primary" type="submit" disabled={busy || !email.includes("@") || (needsCaptcha && !captcha)}>
+            <IconMail size={16} /> {busy ? "Sending…" : needsCaptcha && !captcha ? "Waiting for security check…" : "Email me a sign-in link"}
           </Button>
         </form>
       ) : (
