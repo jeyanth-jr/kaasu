@@ -11,7 +11,7 @@ import { createApi, istDay, type NavStore } from "../server/core";
 interface Env {
   /** KV namespace for the daily NAV file (optional: falls back to per-isolate memory). */
   NAV_KV?: KVNamespace;
-  SUPABASE_URL: string;
+  SUPABASE_URL?: string;
   /** Only for legacy HS256 Supabase projects. */
   SUPABASE_JWT_SECRET?: string;
   /** Comma-separated origins allowed to call the API, e.g. https://kaasu.vercel.app,*.vercel.app */
@@ -69,6 +69,9 @@ export default {
     const open = path === "/api/health";
     let subject = "anonymous";
     if (!open && env.AUTH_REQUIRED !== "false") {
+      if (!env.SUPABASE_URL) {
+        return withCors(new Response(JSON.stringify({ ok: false, error: "API not configured: set SUPABASE_URL in the Worker's variables" }), { status: 503, headers: { "content-type": "application/json" } }), origin, allowed);
+      }
       const user = await verifyBearer(req, { supabaseUrl: env.SUPABASE_URL, jwtSecret: env.SUPABASE_JWT_SECRET });
       if (!user) return withCors(new Response(JSON.stringify({ ok: false, error: "sign in required" }), { status: 401, headers: { "content-type": "application/json" } }), origin, allowed);
       subject = user.sub;

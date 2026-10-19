@@ -1,17 +1,21 @@
-name = "kaasu-api"
+name = "kaasu"
 main = "worker/index.ts"
 compatibility_date = "2026-09-01"
 workers_dev = true
 
-# Public, non-secret settings. Secrets (if any) go through `wrangler secret put`.
-[vars]
-# Your Supabase project URL, e.g. https://abcd1234.supabase.co
-SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
-# Origins allowed to call the API. "*.vercel.app" also covers preview deployments.
-ALLOWED_ORIGINS = "http://localhost:5173,https://YOUR-APP.vercel.app"
+# Keep variables you set in the Cloudflare dashboard (Settings → Variables and Secrets)
+# instead of overwriting them on every deploy. Set these two there, once:
+#
+#   SUPABASE_URL     = https://<your-project-ref>.supabase.co
+#   ALLOWED_ORIGINS  = https://<your-app>.vercel.app          (comma-separated; "*.vercel.app" also allows previews)
+#
+# Legacy HS256 Supabase projects also need the secret SUPABASE_JWT_SECRET.
+keep_vars = true
 
-# Daily AMFI NAV file cache. Create it once:  npx wrangler kv namespace create NAV_KV
-# then paste the printed id below.
-[[kv_namespaces]]
-binding = "NAV_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+# Optional: cache the daily AMFI NAV file in KV so each new Worker instance doesn't re-download it.
+# Without it the Worker still works (it keeps the file in memory per instance).
+# To enable: npx wrangler kv namespace create NAV_KV, then uncomment with the printed id.
+#
+# [[kv_namespaces]]
+# binding = "NAV_KV"
+# id = "<id printed by the command above>"

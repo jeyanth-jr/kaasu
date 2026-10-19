@@ -27,40 +27,43 @@ You need free accounts on all three. I couldn't create them or deploy for you: e
 
 ## 2. Cloudflare Worker (price API)
 
-```bash
-npx wrangler login
-npx wrangler kv namespace create NAV_KV     # prints an id
-```
+The Worker name in [`wrangler.toml`](../wrangler.toml) is `kaasu` (your URL will be `https://kaasu.<your-subdomain>.workers.dev`).
 
-Edit [`wrangler.toml`](../wrangler.toml):
+**Connected to GitHub (Workers Builds, recommended):** in the Cloudflare dashboard, Workers & Pages → Create → import the repo. Leave the build command empty and keep the deploy command `npx wrangler deploy`. Then, once, open the Worker → **Settings → Variables and Secrets** and add:
 
-- `SUPABASE_URL`: your Project URL
-- `ALLOWED_ORIGINS`: your Vercel origin(s), comma-separated. `*.vercel.app` style wildcards match preview deployments (https only). Anything not listed gets a 403.
-- `[[kv_namespaces]] id`: the id printed above
+| Name | Value |
+| --- | --- |
+| `SUPABASE_URL` | your Supabase Project URL, e.g. `https://abcd1234.supabase.co` |
+| `ALLOWED_ORIGINS` | your Vercel origin(s), comma-separated, e.g. `https://kaasu.vercel.app`. `*.vercel.app` also matches preview deployments (https only). Anything not listed gets a 403. |
+| `SUPABASE_JWT_SECRET` (secret) | only for legacy HS256 Supabase projects |
 
-Then:
+`keep_vars = true` in `wrangler.toml` makes deploys leave these dashboard values alone. Without `SUPABASE_URL` the Worker answers 503 "API not configured", and without `ALLOWED_ORIGINS` browsers get 403.
 
-```bash
-npx wrangler deploy
-# Only for legacy HS256 Supabase projects:
-npx wrangler secret put SUPABASE_JWT_SECRET
-```
+**From your terminal instead:** `npx wrangler login`, then `npx wrangler deploy`, then set the same variables in the dashboard.
 
-Note the URL it prints, e.g. `https://kaasu-api.<you>.workers.dev`.
+**Optional KV cache** for the daily AMFI file (so each new Worker instance doesn't re-download it): `npx wrangler kv namespace create NAV_KV`, then uncomment the `[[kv_namespaces]]` block in `wrangler.toml` with the printed id. Never commit the placeholder id: Cloudflare rejects deploys with an invalid namespace id.
+
+Check it: open `https://kaasu.<you>.workers.dev/api/health`, which should return `{"ok":true,...}`. Every other route returns 401 without a signed-in user's token.
 
 What the Worker enforces: allowed origins only; a valid, unexpired Supabase token (audience `authenticated`, issuer your project) on every route except `/api/health`; a per-user limit of 120 requests/minute per isolate; GET only. For a hard limit, also add a **Cloudflare rate-limiting rule** on the route in the dashboard.
 
-> **CPU budget:** the Worker parses only the lines it needs from the 1.5 MB AMFI file (about 8 ms for a fund lookup plus a search on a desktop-class CPU) and keeps each day's file in KV. The Workers **Free** plan allows about 10 ms CPU per request, which is tight for the first request of a new day, so the **Paid plan ($5/month)** is the safe choice. I measured the lookup in Node and ran the Worker locally in `wrangler dev`, but have not measured it on Cloudflare's edge.
+> **CPU budget:** the Worker parses only the lines it needs from the 1.5 MB AMFI file (about 8 ms for a fund lookup plus a search on a desktop-class CPU). The Workers **Free** plan allows about 10 ms CPU per request, which is tight for the first request on a new instance, so the **Paid plan ($5/month)** is the safe choice. I measured the lookup in Node and ran the Worker locally in `wrangler dev`, but have not measured it on Cloudflare's edge.
 
 ## 3. Vercel (web app)
 
-Import the GitHub repo in Vercel (or `npx vercel` from this folder). The framework preset is picked up from [`vercel.json`](../vercel.json). Set these **environment variables** (Production, and Preview if you want them):
+Import the GitHub repo in Vercel (or `npx vercel` from this folder). The framework preset is picked up from [`vercel.json`](../vercel.json).
+
+**Vercel's "Optional Integrations → Supabase" prompt** is a convenience, not a requirement. If you add it, Vercel links a Supabase project and injects `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which Kaasu reads automatically (so you can skip those two variables below). It does **not** run the database migration: you still run `supabase/migrations/0001_init.sql` in that project (step 1.2). The integration also adds server-side secrets (`SUPABASE_SERVICE_ROLE_KEY`, Postgres URLs). Kaasu never uses them and they are not exposed to the browser bundle, but you can remove them from Vercel if you want a smaller blast radius.
+
+Set these **environment variables** (Production, and Preview if you want them):
 
 | Name | Value |
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase Project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon / publishable key |
-| `VITE_API_BASE` | Worker URL from step 2, no trailing slash |
+| `VITE_API_BASE` | Worker URL from step 2, no trailing slash, e.g. `https://kaasu.<you>.workers.dev` |
+
+Environment variables are baked in at build time, so **redeploy after changing them**.
 
 Deploy. Then make sure the final Vercel URL is in Supabase's redirect URLs (step 1.3) and in the Worker's `ALLOWED_ORIGINS` (step 2). If you add a custom domain later, add it to both and to the `connect-src` entry in `vercel.json` only if the API is on a custom domain (workers.dev and supabase.co are already allowed).
 
