@@ -53,7 +53,9 @@ export function rebalanceWithNewMoney(
   newMoney: Paise,
 ): RebalancePlan {
   const targeted = bands.filter((b) => b.maxPct > 0);
-  const mids = targeted.map((b) => ({ c: b.assetClass, w: (b.minPct + b.maxPct) / 2 }));
+  // A band with a 0% minimum is a cap ("at most 5% cash"), not something to buy into.
+  const buyable = targeted.some((b) => b.minPct > 0) ? targeted.filter((b) => b.minPct > 0) : targeted;
+  const mids = buyable.map((b) => ({ c: b.assetClass, w: (b.minPct + b.maxPct) / 2 }));
   const wSum = mids.reduce((s, m) => s + m.w, 0) || 1;
   const current = (c: AssetClass) => Math.max(0, values[c] ?? 0);
   const total = Object.values(values).reduce<number>((s, v) => s + Math.max(0, v ?? 0), 0);

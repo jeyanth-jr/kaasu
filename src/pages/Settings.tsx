@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { db, nowISO, requestPersistence, saveSettings } from "../db/db";
 import { backupFileName, clearAll, createBackup, parseBackup, restoreBackup } from "../db/backup";
+import { decryptText, encryptText, isEncrypted } from "../db/crypto";
 import { clearSampleData, loadSampleData } from "../db/sample";
 import { formatDate } from "../domain/dates";
 import { ASSET_CLASSES, DEFAULT_TAX, type AllocationBand, type Settings, type TaxConfig } from "../domain/types";
@@ -228,25 +229,38 @@ function PricesSection() {
 function BackupSection({ lastBackupAt, counts }: { lastBackupAt?: string; counts: { instruments: number; txns: number; prices: number } }) {
   const [msg, setMsg] = useState<{ tone: "accent" | "warn"; text: string } | null>(null);
   const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [passphrase, setPassphrase] = useState("");
   useEffect(() => {
     void navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null));
   }, []);
 
   async function download() {
     const backup = await createBackup();
-    const blob = new Blob([JSON.stringify(backup, null, 1)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = backupFileName();
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    const plain = JSON.stringify(backup, null, 1);
+    const body = passphrase ? JSON.stringify(await encryptText(plain, passphrase)) : plain;
+    saveFile(body, passphrase ? backupFileName().replace(".json", ".encrypted.json") : backupFileName(), "application/json");
     await saveSettings({ lastBackupAt: nowISO() });
-    setMsg({ tone: "accent", text: `Saved ${backup.data.instruments.length} instruments and ${backup.data.txns.length} transactions.` });
+    setMsg({
+      tone: "accent",
+      text: `Saved ${backup.data.instruments.length} instruments and ${backup.data.txns.length} transactions${passphrase ? ", encrypted. Without the passphrase this file can't be restored" : ""}.`,
+    });
   }
 
   async function restore(file: File) {
-    const parsed = parseBackup(await file.text());
+    let text = await file.text();
+    try {
+      const json: unknown = JSON.parse(text);
+      if (isEncrypted(json)) {
+        const pass = prompt("This backup is encrypted. Enter its passphrase:");
+        if (!pass) return;
+        const plain = await decryptText(json, pass);
+        if (plain === null) return setMsg({ tone: "warn", text: "Wrong passphrase, or the file was modified." });
+        text = plain;
+      }
+    } catch {
+      /* parseBackup reports invalid JSON */
+    }
+    const parsed = parseBackup(text);
     if (!parsed.ok) return setMsg({ tone: "warn", text: parsed.error });
     const d = parsed.backup.data;
     if (!confirm(`Replace everything here with this backup from ${formatDate(parsed.backup.exportedAt.slice(0, 10))}? (${d.instruments.length} instruments, ${d.txns.length} transactions). Current data will be overwritten.`)) return;
@@ -256,9 +270,15 @@ function BackupSection({ lastBackupAt, counts }: { lastBackupAt?: string; counts
 
   return (
     <div className="flex flex-col gap-3">
+      <Field label="Passphrase (optional)" hint="Encrypts the backup file in your browser (AES-256). Forget it and the file is unreadable.">
+        {(id) => <Input id={id} type="password" autoComplete="new-password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} className="max-w-xs" />}
+      </Field>
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={download}>
-          <IconDownload size={16} /> Download backup (.json)
+          <IconDownload size={16} /> {passphrase ? "Download encrypted backup" : "Download backup (.json)"}
+        </Button>
+        <Button onClick={() => void exportTxnsCsv()}>
+          <IconDownload size={16} /> Transactions as CSV
         </Button>
         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-sunken">
           <IconUpload size={16} /> Restore from file
@@ -297,6 +317,38 @@ function BackupSection({ lastBackupAt, counts }: { lastBackupAt?: string; counts
       </details>
     </div>
   );
+}
+
+function saveFile(body: string, name: string, type: string) {
+  const url = URL.createObjectURL(new Blob([body], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/** Spreadsheet-friendly export of every transaction (re-importable via the CSV importer). */
+async function exportTxnsCsv() {
+  const [instruments, txns] = await Promise.all([db.instruments.toArray(), db.txns.toArray()]);
+  const byId = new Map(instruments.map((i) => [i.id, i]));
+  const esc = (v: string | number | undefined) => {
+    const s = v === undefined ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [["Date", "Name", "Kind", "Symbol", "AMFI code", "Type", "Qty", "Price", "Amount", "Charges", "TDS", "Notes"].join(",")];
+  for (const t of [...txns].sort((a, b) => (a.date < b.date ? -1 : 1))) {
+    const i = byId.get(t.instrumentId);
+    const d = i?.details;
+    const symbol = d && (d.kind === "stock" || d.kind === "etf" || d.kind === "gold") ? (d.symbol ?? "") : "";
+    const amfi = d?.kind === "mf" ? d.amfiCode : "";
+    rows.push(
+      [t.date, i?.name ?? "", i?.kind ?? "", symbol, amfi, t.type, t.qty, t.price, t.amount / 100, t.charges ? t.charges / 100 : undefined, t.tds ? t.tds / 100 : undefined, t.notes]
+        .map(esc)
+        .join(","),
+    );
+  }
+  saveFile(rows.join("\n"), `kaasu-transactions-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
 }
 
 function SampleSection({ hasSample }: { hasSample: boolean }) {

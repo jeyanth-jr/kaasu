@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { buildPortfolio, netWorthSeries } from "../domain/portfolio";
 import { createBackup, parseBackup, restoreBackup } from "./backup";
-import { db, getSettings } from "./db";
+import { db, getSettings, undoImport } from "./db";
 import { clearSampleData, loadSampleData } from "./sample";
 
 const asOf = "2026-10-19";
@@ -27,7 +27,7 @@ describe("sample data, backup and restore", () => {
     expect(pf.netWorth).toBeGreaterThan(5_00_000_00);
     expect(pf.realized).toBeGreaterThan(0); // the ITC sale
     expect(pf.xirr).not.toBeNull();
-    expect(pf.stalePrices.map((h) => h.instrument.name)).toEqual(["Gold coin 24K", "Muthoot Finance NCD 9.0% 2027"]);
+    expect(pf.stalePrices).toEqual([]);
     const series = netWorthSeries(s);
     expect(series.length).toBeGreaterThan(24);
     expect(series.at(-1)?.netWorth).toBe(pf.netWorth);
@@ -65,5 +65,20 @@ describe("sample data, backup and restore", () => {
     expect(await db.txns.count()).toBe(1);
     expect(await db.prices.count()).toBe(0);
     expect(await db.liabilities.count()).toBe(0);
+  });
+
+  it("undoes a CSV import, removing instruments it created but keeping ones that gained other entries", async () => {
+    const base = { kind: "stock" as const, assetClass: "equity" as const, taxClass: "equity" as const, emergencyLayer: "none" as const, createdAt: "2026-01-01" };
+    await db.instruments.bulkPut([
+      { ...base, id: "a", name: "A", details: { kind: "stock", exchange: "NSE", symbol: "A" } },
+      { ...base, id: "b", name: "B", details: { kind: "stock", exchange: "NSE", symbol: "B" } },
+    ]);
+    const t = (id: string, instrumentId: string, importBatchId?: string) => ({ id, instrumentId, date: "2026-01-02", type: "buy" as const, qty: 1, price: 1, amount: 100, source: "csv" as const, importBatchId, createdAt: "x" });
+    await db.txns.bulkPut([t("1", "a", "batch"), t("2", "b", "batch"), t("3", "b")]);
+    await db.imports.put({ id: "batch", createdAt: "x", source: "csv", fileName: "f.csv", rows: 2, instrumentIds: ["a", "b"] });
+    expect(await undoImport("batch")).toBe(2);
+    expect((await db.instruments.toArray()).map((i) => i.id)).toEqual(["b"]);
+    expect((await db.txns.toArray()).map((x) => x.id)).toEqual(["3"]);
+    expect(await db.imports.count()).toBe(0);
   });
 });

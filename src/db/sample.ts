@@ -178,6 +178,8 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
   }
   const coin = add("coin", "Gold coin 24K", { kind: "gold", form: "physical", purity: "24K 999" }, { taxClass: "unlistedOther" });
   trade(coin, "buy", addMonths(asOf, -27), 10, 5450);
+  // Physical gold and unlisted-style holdings are priced by hand, with a date.
+  prices.push({ instrumentId: coin, date: addDays(asOf, -3), price: 7420, source: "manual", fetchedAt: `${addDays(asOf, -3)}T09:00:00.000Z` });
 
   // --- Debt ---------------------------------------------------------------
   const rdStart = withDay(addMonths(asOf, -10), 7);
@@ -212,6 +214,7 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     listed: true,
   });
   trade(ncd, "buy", ncdStart, 25, 1000);
+  prices.push({ instrumentId: ncd, date: lastWeekday(addDays(asOf, -5)), price: 1012.5, source: "manual", fetchedAt: `${addDays(asOf, -5)}T09:00:00.000Z` });
   for (let q = 1; q <= 3; q++) {
     const d = addMonths(addMonths(ncdStart, 24), -24 + q * 3);
     if (d <= asOf) t(ncd, "coupon", d, { amount: toPaise(25 * 1000 * 0.09 / 4), tds: toPaise(25 * 1000 * 0.09 / 4 * 0.1) });

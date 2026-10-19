@@ -134,6 +134,13 @@ describe("allocation", () => {
     expect(plan.split.find((s) => s.assetClass === "debt")!.amount).toBeGreaterThan(plan.split.find((s) => s.assetClass === "gold")!.amount);
   });
 
+  it("treats 0%-minimum bands as caps and never buys into them", () => {
+    const withCaps = [...bands, { assetClass: "cash" as const, minPct: 0, maxPct: 5 }, { assetClass: "other" as const, minPct: 0, maxPct: 5 }];
+    const plan = rebalanceWithNewMoney({ equity: 70_000_00, debt: 20_000_00, gold: 10_000_00 }, withCaps, 10_000_00);
+    expect(plan.split.map((s) => s.assetClass).sort()).toEqual(["equity"]);
+    expect(plan.split[0]!.amount).toBe(10_000_00);
+  });
+
   it("computes the new money needed to rebalance without selling", () => {
     const values = { equity: 90_00_000, debt: 5_00_000, gold: 5_00_000 }; // T = 1,00,00,000 paise
     const plan = rebalanceWithNewMoney(values, bands, 0);

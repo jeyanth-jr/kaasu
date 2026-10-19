@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAdd } from "../App";
 import { clearSampleData, loadSampleData } from "../db/sample";
 import { daysBetween, formatDate, formatMonth, monthKey } from "../domain/dates";
@@ -61,6 +61,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="sr-only">Dashboard</h1>
       {hasSample && (
         <Callout
           tone="warn"
@@ -133,7 +134,7 @@ function NetWorthChart() {
     >
       <div className="money h-56 sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={rows} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart data={rows} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="nwFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28} />
@@ -151,7 +152,7 @@ function NetWorthChart() {
             />
             <Area type="monotone" dataKey="nw" stroke="var(--accent)" strokeWidth={2} fill="url(#nwFill)" />
             <Line type="monotone" dataKey="inv" stroke="var(--faint)" strokeDasharray="4 4" strokeWidth={1.5} dot={false} />
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">

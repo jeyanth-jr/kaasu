@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { HashRouter, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { saveSettings } from "./db/db";
 import { daysBetween, todayISO } from "./domain/dates";
@@ -6,6 +6,7 @@ import { refreshPrices, type RefreshReport } from "./prices/client";
 import { AddTransactionSheet } from "./ui/AddTransaction";
 import { Button, cx } from "./ui/components";
 import { DataProvider, useData } from "./ui/data";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import {
   IconCalendar,
   IconEye,
@@ -21,14 +22,15 @@ import {
   IconSettings,
   IconSun,
 } from "./ui/icons";
-import { AllocationPage } from "./pages/Allocation";
-import { CalendarPage } from "./pages/Calendar";
-import { DashboardPage } from "./pages/Dashboard";
-import { HoldingDetailPage } from "./pages/HoldingDetail";
-import { HoldingsPage } from "./pages/Holdings";
-import { SettingsPage } from "./pages/Settings";
-import { TaxPage } from "./pages/Tax";
-import { TransactionsPage } from "./pages/Transactions";
+// Pages load on demand so the first screen arrives quickly on a phone.
+const DashboardPage = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.DashboardPage })));
+const HoldingsPage = lazy(() => import("./pages/Holdings").then((m) => ({ default: m.HoldingsPage })));
+const HoldingDetailPage = lazy(() => import("./pages/HoldingDetail").then((m) => ({ default: m.HoldingDetailPage })));
+const TransactionsPage = lazy(() => import("./pages/Transactions").then((m) => ({ default: m.TransactionsPage })));
+const AllocationPage = lazy(() => import("./pages/Allocation").then((m) => ({ default: m.AllocationPage })));
+const TaxPage = lazy(() => import("./pages/Tax").then((m) => ({ default: m.TaxPage })));
+const CalendarPage = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.CalendarPage })));
+const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
 
 // ---------------------------------------------------------------------------
 // Global "Add transaction" sheet
@@ -91,7 +93,9 @@ function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.body.classList.toggle("privacy", settings.privacyMode);
   }, [settings.privacyMode]);
-  useEffect(() => window.scrollTo(0, 0), [location.pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const doRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -176,7 +180,11 @@ function Shell({ children }: { children: ReactNode }) {
         )}
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pt-5 pb-28 sm:px-6 md:pb-12">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 pt-5 pb-28 sm:px-6 md:pb-12">
+        <ErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<div className="py-20 text-center text-sm text-muted">Loading…</div>}>{children}</Suspense>
+        </ErrorBoundary>
+      </main>
 
       {/* Mobile: FAB + bottom tabs */}
       <button

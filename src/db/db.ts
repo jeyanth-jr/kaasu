@@ -16,6 +16,24 @@ export interface ImportBatch {
   source: "csv";
   fileName: string;
   rows: number;
+  /** Instruments this import created; undo removes them if they end up empty. */
+  instrumentIds?: string[];
+}
+
+/** Undo a CSV import: delete its transactions and any instruments it created that are now empty. */
+export async function undoImport(batchId: string): Promise<number> {
+  return db.transaction("rw", [db.txns, db.instruments, db.prices, db.imports], async () => {
+    const n = await db.txns.where("importBatchId").equals(batchId).delete();
+    const batch = await db.imports.get(batchId);
+    for (const id of batch?.instrumentIds ?? []) {
+      if ((await db.txns.where("instrumentId").equals(id).count()) === 0) {
+        await db.prices.where("instrumentId").equals(id).delete();
+        await db.instruments.delete(id);
+      }
+    }
+    await db.imports.delete(batchId);
+    return n;
+  });
 }
 
 export class KaasuDB extends Dexie {

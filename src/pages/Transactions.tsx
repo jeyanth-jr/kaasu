@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdd } from "../App";
-import { db } from "../db/db";
+import { undoImport } from "../db/db";
 import { financialYear, formatDate, formatMonth, monthKey } from "../domain/dates";
 import { sortTxns } from "../domain/lots";
 import { formatINR, formatPrice, formatQty } from "../domain/money";
@@ -143,9 +143,11 @@ export function TransactionsPage() {
         title="Transactions"
         sub={`${filtered.length} of ${txns.length}`}
         action={
-          <Button variant="primary" onClick={() => openAdd()} className="hidden md:inline-flex">
-            <IconPlus size={16} /> Add
-          </Button>
+          <div className="hidden md:block">
+            <Button variant="primary" onClick={() => openAdd()}>
+              <IconPlus size={16} /> Add
+            </Button>
+          </div>
         }
       />
       <div className="mb-3 grid gap-2 sm:grid-cols-4">
@@ -186,9 +188,8 @@ export function TransactionsPage() {
               <button
                 className="font-medium text-loss"
                 onClick={async () => {
-                  if (!confirm(`Undo this import? ${n} transactions will be deleted (instruments it created stay, but empty).`)) return;
-                  await db.txns.where("importBatchId").equals(id).delete();
-                  await db.imports.delete(id);
+                  if (!confirm(`Undo this import? Its ${n} transactions and any holdings it created will be deleted.`)) return;
+                  await undoImport(id);
                 }}
               >
                 Undo

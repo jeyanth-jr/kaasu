@@ -65,9 +65,9 @@ export function PriceStamp({ point, ageDays, className }: { point: PricePoint | 
 
 export function Card({ title, action, children, className, pad = true }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
   return (
-    <section className={cx("rounded-2xl border border-line bg-surface", className)}>
+    <section className={cx("min-w-0 rounded-2xl border border-line bg-surface", className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5">
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 pt-4 sm:px-5">
           {title && <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">{title}</h2>}
           {action}
         </header>

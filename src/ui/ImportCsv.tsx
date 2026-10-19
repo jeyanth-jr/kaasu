@@ -71,7 +71,7 @@ export function ImportCsv() {
       await db.transaction("rw", [db.instruments, db.txns, db.imports], async () => {
         await db.instruments.bulkAdd([...newInst.values()]);
         await db.txns.bulkAdd(txns);
-        await db.imports.add({ id: batchId, createdAt: created, source: "csv", fileName, rows: txns.length });
+        await db.imports.add({ id: batchId, createdAt: created, source: "csv", fileName, rows: txns.length, instrumentIds: [...newInst.values()].map((i) => i.id) });
       });
       setDone(`Imported ${txns.length} transactions${newInst.size ? ` and created ${newInst.size} instruments` : ""}. You can undo this from Transactions. Deposits imported from a spreadsheet need their rate and dates filled in on the holding page.`);
       setRows(null);

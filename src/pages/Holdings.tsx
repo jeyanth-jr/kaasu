@@ -96,9 +96,11 @@ export function HoldingsPage() {
         title="Holdings"
         sub={`${portfolio.holdings.filter((h) => !h.closed).length} open positions`}
         action={
-          <Button variant="primary" onClick={() => openAdd()} className="hidden md:inline-flex">
-            <IconPlus size={16} /> Add
-          </Button>
+          <div className="hidden md:block">
+            <Button variant="primary" onClick={() => openAdd()}>
+              <IconPlus size={16} /> Add
+            </Button>
+          </div>
         }
       />
       <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
@@ -123,12 +125,12 @@ export function HoldingsPage() {
           <thead>
             <tr className="text-left">
               <Th k="name" className="rounded-tl-2xl">Holding</Th>
-              <Th k="invested" className="hidden text-right lg:table-cell">Invested</Th>
+              <Th k="invested" className="hidden text-right xl:table-cell">Invested</Th>
               <Th k="value" className="text-right">Value</Th>
               <Th k="pl" className="text-right">P/L</Th>
-              <Th k="day" className="hidden text-right md:table-cell">Today</Th>
-              <Th k="xirr" className="hidden text-right sm:table-cell">XIRR</Th>
-              <Th k="weight" className="hidden rounded-tr-2xl text-right lg:table-cell">Weight</Th>
+              <Th k="day" className="hidden text-right xl:table-cell">Today</Th>
+              <Th k="xirr" className="hidden text-right sm:table-cell md:hidden lg:table-cell">XIRR</Th>
+              <Th k="weight" className="hidden rounded-tr-2xl text-right xl:table-cell">Weight</Th>
             </tr>
           </thead>
           <tbody>
@@ -138,11 +140,11 @@ export function HoldingsPage() {
               const plPct = h.invested > 0 ? (h.unrealized / h.invested) * 100 : null;
               return (
                 <tr key={inst.id} className={cx("group", h.closed && "opacity-60")}>
-                  <td className="border-t border-line px-3 py-2.5 align-top">
+                  <td className="w-full max-w-0 border-t border-line px-3 py-2.5 align-top">
                     <Link to={`/holdings/${inst.id}`} className="block min-w-0 group-hover:text-accent">
-                      <span className="flex items-center gap-1.5">
-                        <span className="truncate font-medium">{inst.name}</span>
-                        {inst.sample && <Badge tone="warn">sample</Badge>}
+                      <span className="block font-medium [overflow-wrap:anywhere] line-clamp-2">
+                        {inst.name}
+                        {inst.sample && <Badge tone="warn" className="ml-1.5 align-middle">sample</Badge>}
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                         <span>{KIND_LABEL[inst.kind]}</span>
@@ -154,7 +156,7 @@ export function HoldingsPage() {
                       </span>
                     </Link>
                   </td>
-                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top lg:table-cell">
+                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top xl:table-cell">
                     <Money p={h.invested} />
                   </td>
                   <td className="border-t border-line px-3 py-2.5 text-right align-top">
@@ -165,13 +167,13 @@ export function HoldingsPage() {
                     <Change p={h.closed ? h.realized : h.unrealized} hideArrow />
                     <div className="text-xs">{h.closed ? <span className="text-faint">realised</span> : <PctChange pct={plPct} />}</div>
                   </td>
-                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top md:table-cell">
+                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top xl:table-cell">
                     {h.dayChange !== null && h.priceAgeDays !== null && h.priceAgeDays <= 4 ? <Change p={h.dayChange} hideArrow /> : <span className="text-faint">—</span>}
                   </td>
-                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top sm:table-cell">
+                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top sm:table-cell md:hidden lg:table-cell">
                     <PctChange pct={h.xirr === null ? null : h.xirr * 100} />
                   </td>
-                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top text-muted num lg:table-cell">{excluded ? "—" : formatPct((h.value / total) * 100)}</td>
+                  <td className="hidden border-t border-line px-3 py-2.5 text-right align-top text-muted num xl:table-cell">{excluded ? "—" : formatPct((h.value / total) * 100)}</td>
                 </tr>
               );
             })}
@@ -179,7 +181,7 @@ export function HoldingsPage() {
           <tfoot>
             <tr className="font-medium">
               <td className="border-t border-line px-3 py-2.5 text-muted">Total ({rows.length})</td>
-              <td className="hidden border-t border-line px-3 py-2.5 text-right lg:table-cell">
+              <td className="hidden border-t border-line px-3 py-2.5 text-right xl:table-cell">
                 <Money p={sumInv} />
               </td>
               <td className="border-t border-line px-3 py-2.5 text-right">
@@ -188,9 +190,9 @@ export function HoldingsPage() {
               <td className="border-t border-line px-3 py-2.5 text-right">
                 <Change p={sumPl} hideArrow />
               </td>
-              <td className="hidden border-t border-line md:table-cell" />
-              <td className="hidden border-t border-line sm:table-cell" />
-              <td className="hidden border-t border-line lg:table-cell" />
+              <td className="hidden border-t border-line xl:table-cell" />
+              <td className="hidden border-t border-line sm:table-cell md:hidden lg:table-cell" />
+              <td className="hidden border-t border-line xl:table-cell" />
             </tr>
           </tfoot>
         </table>

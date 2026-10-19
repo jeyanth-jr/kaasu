@@ -36,6 +36,30 @@ describe("AMFI NAVAll parser", () => {
     expect(s[2]?.fundHouse).toBe("Other AMC");
   });
 
+  it("reads the newer 8-column layout (Plan and Option columns) from the header", () => {
+    const text = [
+      "Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Plan;Option;Net Asset Value;Date",
+      "",
+      "Open Ended Schemes(Equity Scheme - Flexi Cap Fund)",
+      "",
+      "Example Mutual Fund",
+      "",
+      "900001;INF000000001;-;Example Flexi Cap Fund;Direct Plan;Growth Option;84.1234;16-Oct-2026",
+    ].join("\n");
+    expect(parseNavAll(text)).toEqual([
+      {
+        code: "900001",
+        name: "Example Flexi Cap Fund - Direct Plan - Growth Option",
+        isinGrowth: "INF000000001",
+        isinReinvest: undefined,
+        nav: 84.1234,
+        date: "2026-10-16",
+        fundHouse: "Example Mutual Fund",
+        category: "Equity Scheme - Flexi Cap Fund",
+      },
+    ]);
+  });
+
   it("converts AMFI dates", () => {
     expect(amfiDate("7-Jan-2026")).toBe("2026-01-07");
     expect(amfiDate("garbage")).toBeNull();
