@@ -7,7 +7,35 @@ export interface RefreshReport {
   message: string;
   updated: number;
   failed: { name: string; reason: string }[];
+  /** Holdings that could be priced from the web but have no symbol / AMFI code yet. */
+  missing: { id: string; name: string }[];
   proxyOnline: boolean;
+}
+
+/**
+ * How an instrument gets its price:
+ * - "web": has a symbol or AMFI code, so refresh fetches it;
+ * - "missing": could be fetched, but the symbol or AMFI code is empty;
+ * - "manual": physical gold, bonds — prices are entered by hand (or derived);
+ * - "none": deposits, cash, commitments are valued without a market price.
+ */
+export type PriceLink = "web" | "missing" | "manual" | "none";
+
+export function priceLink(i: Instrument): PriceLink {
+  const d = i.details;
+  switch (d.kind) {
+    case "stock":
+    case "etf":
+      return d.symbol.trim() ? "web" : "missing";
+    case "mf":
+      return d.amfiCode.trim() ? "web" : "missing";
+    case "gold":
+      return d.form === "etf" ? (d.symbol?.trim() ? "web" : "missing") : "manual";
+    case "bond":
+      return "manual";
+    default:
+      return "none";
+  }
 }
 
 async function getJson<T>(url: string, timeoutMs = 35_000): Promise<T> {
@@ -40,6 +68,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
       message: "Price proxy isn't running (start it with npm run dev). Manual prices still work.",
       updated: 0,
       failed: [],
+      missing: [],
       proxyOnline: false,
     };
   }
@@ -47,6 +76,7 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   const failed: RefreshReport["failed"] = [];
   const fellBack: string[] = [];
   const fetchedAt = nowISO();
+  const missing = all.filter((i) => priceLink(i) === "missing").map((i) => ({ id: i.id, name: i.name }));
 
   const funds = all.filter((i) => i.details.kind === "mf" && i.details.amfiCode);
   if (funds.length) {
@@ -87,10 +117,11 @@ export async function refreshPrices(opts: { includeSample?: boolean } = {}): Pro
   const skippedSample = !opts.includeSample && (await db.instruments.filter((i) => !!i.sample).count()) > 0;
   const parts = [`Updated ${points.length} price${points.length === 1 ? "" : "s"}`];
   if (failed.length) parts.push(`${failed.length} failed (${failed.slice(0, 3).map((f) => f.name).join(", ")}${failed.length > 3 ? "…" : ""}) — enter those manually`);
+  if (missing.length) parts.push(`${missing.length} have no symbol or AMFI code (${missing.slice(0, 3).map((m) => m.name).join(", ")}${missing.length > 3 ? "…" : ""}) — link them on Holdings`);
   if (fellBack.length) parts.push(`${fellBack.length} via fallback source (${fellBack.slice(0, 3).join(", ")}${fellBack.length > 3 ? "…" : ""})`);
   if (skippedSample) parts.push("sample holdings keep their sample prices");
-  if (funds.length + listed.length === 0) parts.splice(0, 1, "Nothing to price from the web yet — add a fund with an AMFI code or a stock with a symbol");
-  return { message: parts.join(" · "), updated: points.length, failed, proxyOnline: true };
+  if (funds.length + listed.length === 0 && missing.length === 0) parts.splice(0, 1, "Nothing to price from the web yet — add a fund with an AMFI code or a stock with a symbol");
+  return { message: parts.join(" · "), updated: points.length, failed, missing, proxyOnline: true };
 }
 
 export async function setManualPrice(instrumentId: string, date: string, price: number): Promise<void> {

@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAdd } from "../App";
 import { formatPct, formatQty } from "../domain/money";
 import type { Holding } from "../domain/portfolio";
 import type { InstrumentKind } from "../domain/types";
 import { KIND_LABEL } from "../domain/types";
-import { Badge, Button, Change, EmptyState, Money, PageHeader, PctChange, PriceStamp, cx } from "../ui/components";
+import { Badge, Button, Callout, Change, EmptyState, Money, PageHeader, PctChange, PriceStamp, cx } from "../ui/components";
 import { useData } from "../ui/data";
-import { IconArrowDown, IconArrowUp, IconPlus } from "../ui/icons";
+import { IconAlert, IconArrowDown, IconArrowUp, IconPlus } from "../ui/icons";
+import { LinkPricesSheet, useUnlinked } from "../ui/LinkPrices";
 
 type Filter = "all" | "equity" | "stock" | "etf" | "mf" | "deposits" | "bond" | "gold" | "cash" | "commitment";
 const FILTERS: { v: Filter; l: string; match: (k: InstrumentKind, h: Holding) => boolean }[] = [
@@ -31,6 +32,9 @@ export function HoldingsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "value", dir: -1 });
   const [showClosed, setShowClosed] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const linkOpen = params.get("link") === "1";
+  const unlinked = useUnlinked();
 
   const available = FILTERS.filter((f) => f.v === "all" || portfolio.holdings.some((h) => f.match(h.instrument.kind, h)));
   const fdef = FILTERS.find((f) => f.v === filter) ?? FILTERS[0]!;
@@ -103,6 +107,22 @@ export function HoldingsPage() {
           </div>
         }
       />
+      {unlinked.length > 0 && (
+        <div className="mb-3">
+          <Callout
+            tone="warn"
+            icon={<IconAlert size={16} className="text-warn" />}
+            title={`${unlinked.length} holding${unlinked.length > 1 ? "s" : ""} can't get prices automatically`}
+          >
+            {unlinked.slice(0, 4).map((i) => i.name).join(", ")}
+            {unlinked.length > 4 ? "…" : ""}: no working NSE symbol or AMFI code.{" "}
+            <button className="font-medium text-ink underline underline-offset-2" onClick={() => setParams({ link: "1" })}>
+              Link price sources
+            </button>
+          </Callout>
+        </div>
+      )}
+      <LinkPricesSheet open={linkOpen} onClose={() => setParams({})} />
       <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {available.map((f) => (
           <button

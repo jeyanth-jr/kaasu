@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseNavAll, searchSchemes, type AmfiScheme } from "./amfi";
 import { googleExchange, googleQuoteUrl, parseGoogleQuote } from "./google";
+import { searchVariants } from "./search";
 
 const PORT = Number(process.env.KAASU_PROXY_PORT ?? 8787);
 const HOST = process.env.KAASU_PROXY_HOST ?? "127.0.0.1";
@@ -229,24 +230,49 @@ app.get("/api/quote", async (req, res) => {
   res.json({ ok: true, quotes: out });
 });
 
+interface SymbolResult {
+  symbol: string;
+  exchange: "NSE" | "BSE";
+  name: string;
+  type: "stock" | "etf";
+  sector?: string;
+}
+
+async function yahooSearch(q: string): Promise<SymbolResult[]> {
+  const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=12&newsCount=0`;
+  const r = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8_000) });
+  if (!r.ok) throw new Error(`search responded ${r.status}`);
+  const json = (await r.json()) as { quotes?: { symbol?: string; shortname?: string; longname?: string; quoteType?: string; sector?: string }[] };
+  return (json.quotes ?? [])
+    .filter((x) => x.symbol && /\.(NS|BO)$/.test(x.symbol))
+    .map((x) => ({
+      symbol: x.symbol!.replace(/\.(NS|BO)$/, ""),
+      exchange: x.symbol!.endsWith(".BO") ? ("BSE" as const) : ("NSE" as const),
+      name: x.longname ?? x.shortname ?? x.symbol!,
+      type: x.quoteType === "ETF" ? ("etf" as const) : ("stock" as const),
+      sector: x.sector,
+    }));
+}
+
 app.get("/api/search", async (req, res) => {
   const q = String(req.query.q ?? "").slice(0, 60);
   if (!q.trim()) return void res.json({ ok: true, results: [] });
   try {
-    const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=12&newsCount=0`;
-    const r = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8_000) });
-    if (!r.ok) throw new Error(`search responded ${r.status}`);
-    const json = (await r.json()) as { quotes?: { symbol?: string; shortname?: string; longname?: string; quoteType?: string; exchange?: string; sector?: string }[] };
-    const results = (json.quotes ?? [])
-      .filter((x) => x.symbol && /\.(NS|BO)$/.test(x.symbol))
-      .map((x) => ({
-        symbol: x.symbol!.replace(/\.(NS|BO)$/, ""),
-        exchange: x.symbol!.endsWith(".BO") ? "BSE" : "NSE",
-        name: x.longname ?? x.shortname ?? x.symbol!,
-        type: x.quoteType === "ETF" ? "etf" : "stock",
-        sector: x.sector,
-      }));
-    res.json({ ok: true, results });
+    // Exact query first; if it finds nothing, progressively looser variants.
+    const seen = new Set<string>();
+    const results: (SymbolResult & { matchedQuery: string })[] = [];
+    for (const variant of searchVariants(q)) {
+      for (const r of await yahooSearch(variant)) {
+        const key = `${r.exchange}:${r.symbol}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({ ...r, matchedQuery: variant });
+      }
+      if (results.length >= 4) break;
+    }
+    // NSE first: that's where Kaasu prices from by default.
+    results.sort((a, b) => (a.exchange === b.exchange ? 0 : a.exchange === "NSE" ? -1 : 1));
+    res.json({ ok: true, results: results.slice(0, 12) });
   } catch (e) {
     res.status(502).json({ ok: false, error: (e as Error).message });
   }

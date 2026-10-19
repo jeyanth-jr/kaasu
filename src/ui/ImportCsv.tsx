@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { db, newId, nowISO } from "../db/db";
 import { KNOWN_SYMBOLS } from "../data/symbols";
+import { confidentKnownMatch, matchExisting } from "../domain/importMatch";
 import { CSV_FIELDS, applyMapping, guessMapping, normalizeName, parseCsvText, type CsvField, type CsvMapping, type ParsedRow } from "../domain/csv";
 import { formatDate } from "../domain/dates";
 import { formatINR, formatQty } from "../domain/money";
@@ -9,6 +10,7 @@ import { KIND_LABEL, isMarketKind } from "../domain/types";
 import { Badge, Button, Callout, Field, Select, cx } from "./components";
 import { useData } from "./data";
 import { blankInstrument } from "./InstrumentForm";
+import { priceLink } from "../prices/client";
 
 const TEMPLATE = `Date,Name,Symbol,Type,Qty,Price,Amount,Charges
 05/04/2025,Infosys,INFY,Buy,10,1450.50,,15.20
@@ -24,22 +26,7 @@ export function ImportCsv() {
   const [busy, setBusy] = useState(false);
 
   const result = useMemo(() => (rows && mapping ? applyMapping(rows, mapping) : null), [rows, mapping]);
-  const matches = useMemo(() => {
-    if (!result) return new Map<number, Instrument | null>();
-    const bySym = new Map<string, Instrument>();
-    const byName = new Map<string, Instrument>();
-    for (const i of instruments) {
-      const d = i.details;
-      if ((d.kind === "stock" || d.kind === "etf") && d.symbol) bySym.set(d.symbol.toUpperCase(), i);
-      if (d.kind === "mf" && d.amfiCode) bySym.set(`AMFI:${d.amfiCode}`, i);
-      byName.set(normalizeName(i.name), i);
-    }
-    const m = new Map<number, Instrument | null>();
-    for (const r of result.rows) {
-      m.set(r.line, (r.symbol && bySym.get(r.symbol)) || (r.amfiCode && bySym.get(`AMFI:${r.amfiCode}`)) || byName.get(normalizeName(r.name)) || null);
-    }
-    return m;
-  }, [result, instruments]);
+  const matches = useMemo(() => (result ? matchExisting(result.rows, instruments) : new Map<number, Instrument | null>()), [result, instruments]);
 
   async function onFile(f: File) {
     setDone(null);
@@ -73,7 +60,12 @@ export function ImportCsv() {
         await db.txns.bulkAdd(txns);
         await db.imports.add({ id: batchId, createdAt: created, source: "csv", fileName, rows: txns.length, instrumentIds: [...newInst.values()].map((i) => i.id) });
       });
-      setDone(`Imported ${txns.length} transactions${newInst.size ? ` and created ${newInst.size} instruments` : ""}. You can undo this from Transactions. Deposits imported from a spreadsheet need their rate and dates filled in on the holding page.`);
+      const unpriced = [...newInst.values()].filter((i) => priceLink(i) === "missing").length;
+      setDone(
+        `Imported ${txns.length} transactions${newInst.size ? ` and created ${newInst.size} instruments` : ""}. You can undo this from Transactions.` +
+          (unpriced ? ` ${unpriced} holding${unpriced > 1 ? "s" : ""} still need an NSE symbol or AMFI code for automatic prices: use "Link price sources" on Holdings.` : "") +
+          " Deposits imported from a spreadsheet need their rate and dates filled in on the holding page.",
+      );
       setRows(null);
       setMapping(null);
     } catch (e) {
@@ -233,7 +225,7 @@ function instrumentFromRow(r: ParsedRow, created: string): Instrument {
   const base = blankInstrument(r.kind, r.name);
   const id = newId("i_");
   if (r.kind === "stock" || r.kind === "etf") {
-    const known = r.symbol ? KNOWN_SYMBOLS.find((k) => k.symbol === r.symbol) : KNOWN_SYMBOLS.find((k) => normalizeName(k.name) === normalizeName(r.name) || normalizeName(k.name).startsWith(normalizeName(r.name)));
+    const known = r.symbol ? KNOWN_SYMBOLS.find((k) => k.symbol === r.symbol) : confidentKnownMatch(r.name);
     return {
       ...base,
       id,

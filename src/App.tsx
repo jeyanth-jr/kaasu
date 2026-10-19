@@ -107,7 +107,8 @@ function Shell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!report) return;
+    // Keep the banner up when something needs attention; otherwise fade after a few seconds.
+    if (!report || report.missing.length > 0 || report.failed.length > 0) return;
     const t = setTimeout(() => setReport(null), 6000);
     return () => clearTimeout(t);
   }, [report]);
@@ -169,8 +170,21 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
         {report && (
-          <div className="border-t border-line bg-surface px-4 py-2 text-center text-xs text-muted" role="status">
-            {report.message}
+          <div className="flex items-start justify-center gap-3 border-t border-line bg-surface px-4 py-2 text-xs text-muted" role="status">
+            <span>
+              {report.message}
+              {report.missing.length > 0 && (
+                <>
+                  {" "}
+                  <NavLink to="/holdings?link=1" className="font-medium text-accent" onClick={() => setReport(null)}>
+                    Link them →
+                  </NavLink>
+                </>
+              )}
+            </span>
+            <button onClick={() => setReport(null)} className="shrink-0 text-faint hover:text-ink" aria-label="Dismiss">
+              ✕
+            </button>
           </div>
         )}
         {needsBackup && !report && (

@@ -57,7 +57,8 @@ export const KNOWN_SYMBOLS: KnownSymbol[] = [
   S("IRCTC", "Indian Railway Catering & Tourism", "Consumer Services"),
   S("ZOMATO", "Eternal (Zomato)", "Consumer Services"),
   S("MARUTI", "Maruti Suzuki", "Automobile"),
-  S("TATAMOTORS", "Tata Motors", "Automobile"),
+  S("TMPV", "Tata Motors Passenger Vehicles", "Automobile"),
+  S("TMCV", "Tata Motors (commercial vehicles)", "Automobile"),
   S("M&M", "Mahindra & Mahindra", "Automobile"),
   S("BAJAJ-AUTO", "Bajaj Auto", "Automobile"),
   S("EICHERMOT", "Eicher Motors", "Automobile"),
@@ -101,13 +102,16 @@ export const KNOWN_SYMBOLS: KnownSymbol[] = [
   E("SILVERBEES", "Nippon India Silver ETF", "SILVER"),
 ];
 
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Offline search; ignores punctuation and spacing so "Dr Reddys" finds "Dr. Reddy's Laboratories". */
 export function searchKnownSymbols(q: string, limit = 8): KnownSymbol[] {
-  const s = q.trim().toLowerCase();
+  const s = norm(q);
   if (!s) return [];
   return KNOWN_SYMBOLS.map((k) => {
-    const sym = k.symbol.toLowerCase();
-    const name = k.name.toLowerCase();
-    const score = sym === s ? 100 : sym.startsWith(s) ? 50 : name.startsWith(s) ? 40 : name.includes(s) ? 20 : sym.includes(s) ? 10 : 0;
+    const sym = norm(k.symbol);
+    const name = norm(k.name);
+    const score = sym === s ? 100 : sym.startsWith(s) ? 50 : name.startsWith(s) ? 40 : name.includes(s) ? 20 : sym.includes(s) ? 10 : s.startsWith(name) ? 15 : 0;
     return { k, score };
   })
     .filter((x) => x.score > 0)

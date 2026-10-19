@@ -65,6 +65,8 @@ Settings → Import from CSV. Save your sheet as CSV, choose the file, then:
 4. Preview every row: each is marked existing or new, and skipped rows show the reason. Then import.
 5. Each import can be undone from Transactions. Undo removes its transactions and the holdings it created.
 
+After importing, stocks whose names clearly match a known company get their NSE symbol automatically. Everything else (funds, misspelt or renamed stocks) shows under **Holdings → Link price sources**. There you pick the right NSE symbol or AMFI scheme from search results, which show each candidate's current price or NAV next to your average cost. Until a holding is linked, the price refresh says it can't price it. Imports never merge into sample holdings.
+
 A holdings-style sheet (one row per position with an average price) imports as one buy per row. Deposits imported from a sheet need their rate and dates filled in afterwards on the holding page.
 
 CAS PDF import is not implemented yet (see roadmap). For now, export your CAS transactions to CSV.
@@ -113,6 +115,7 @@ The harvest helper respects FIFO: it never suggests a sale that would first forc
 - **Fallback:** if Google can't price a symbol, Yahoo Finance's public chart endpoint (`SYMBOL.NS` or `.BO`) is tried, and vice versa if you choose Yahoo in Settings → Prices. Quotes are cached for 60 seconds. Neither source is official and either may change. If both fail, the holding says so and you enter a manual price.
 - **Physical gold:** either a manual price per gram, or derived from a gold ETF's price ÷ grams per unit (Settings → Prices).
 - Refreshing prices never overwrites sample holdings, which keep their sample prices.
+- A holding without a symbol or AMFI code, or whose symbol never returns a price (e.g. renamed after a demerger), is listed by the refresh and on Holdings with a **Link price sources** fixer. Symbol search falls back to shorter and single-word queries, so misspelt names such as "PNB Hosuing Finance" still find PNBHOUSING.
 
 ## Project layout
 
@@ -130,7 +133,7 @@ Domain code has no React or IndexedDB dependency. Everything on screen is derive
 
 ## Tests
 
-`npm test` runs 75 tests:
+`npm test` runs 81 tests:
 
 - **XIRR:** the Excel reference case, leap years, SIPs, extreme rates.
 - **FIFO:** partial lots, charges, splits/bonus, fractional units, same-day ordering, oversell.

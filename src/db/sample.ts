@@ -147,7 +147,7 @@ export async function loadSampleData(asOf: ISODate = todayISO()): Promise<void> 
     { key: "infy", name: "Infosys", sym: "INFY", sector: "IT", p0: 1400, drift: 0.06, buys: [[-26, 10], [-9, 5]] },
     { key: "itc", name: "ITC", sym: "ITC", sector: "FMCG", p0: 380, drift: 0.08, buys: [[-29, 60], [-11, 30]], sell: [-3, 40] },
     { key: "sbin", name: "State Bank of India", sym: "SBIN", sector: "Financials", p0: 560, drift: 0.14, buys: [[-22, 20]] },
-    { key: "tmpv", name: "Tata Motors", sym: "TATAMOTORS", sector: "Automobile", p0: 640, drift: 0.02, buys: [[-13, 15]] },
+    { key: "tmpv", name: "Tata Motors Passenger Vehicles", sym: "TMPV", sector: "Automobile", p0: 640, drift: 0.02, buys: [[-13, 15]] },
     { key: "irctc", name: "IRCTC", sym: "IRCTC", sector: "Consumer Services", p0: 820, drift: 0.03, buys: [[-5, 3]] },
   ] as const;
   for (const [i, s] of stocks.entries()) {
