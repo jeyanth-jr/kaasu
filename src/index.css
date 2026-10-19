@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "@fontsource-variable/bricolage-grotesque";
-@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -89,8 +89,8 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-brass: var(--brass);
-  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", "Plus Jakarta Sans Variable", ui-sans-serif, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, sans-serif;
   --shadow-card: var(--shadow);
 }
 
@@ -118,7 +118,6 @@ body {
 
 .display {
   font-family: var(--font-display);
-  font-variation-settings: "wdth" 90;
   letter-spacing: -0.025em;
 }
 
